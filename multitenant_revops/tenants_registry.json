@@ -1,0 +1,11 @@
+{
+  "master_template": {
+    "tenant_id": "TNT-MASTER-001",
+    "tenant_name": "Golden Master Template",
+    "spreadsheet_id": "1QnjrrbpqhYssofchee7G06szWrFvBCcOqGIVokjqdVc",
+    "spreadsheet_url": "https://docs.google.com/spreadsheets/d/1QnjrrbpqhYssofchee7G06szWrFvBCcOqGIVokjqdVc/edit",
+    "version": "16.0",
+    "created_at": "2026-09-29T20:30:00"
+  },
+  "tenants": []
+}

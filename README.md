@@ -73,6 +73,13 @@ jobhunter-ai/
 ├── docs/                               # Руководства по настройке
 │   ├── google_sheets_setup.md          # Пошаговая настройка Google Sheets
 │   └── ollama_setup.md                 # Установка и запуск модели DeepSeek в Ollama
+├── multitenant_revops/                 # Архитектура масштабирования V16.0 Multi-Tenant
+│   ├── README.md                       # Руководство по Hub-and-Spoke модели и RBAC
+│   ├── tenant_provisioner.py           # Автоматический провижининг клиентов за 20 сек
+│   ├── batch_updater.py                # OTA каскадный апдейтер формул для 30+ клиентов
+│   ├── dwh_bridge.py                   # Мост для обхода лимита 10k строк в Cold Storage
+│   ├── clickhouse_schema.sql           # DDL схемы ClickHouse (deals, touchpoints, audit)
+│   └── tenants_registry.json           # Реестр подключенных клиентских инстансов
 └── scripts/
     └── test_ollama_filter.py           # Скрипт тестирования промпта без n8n
 ```

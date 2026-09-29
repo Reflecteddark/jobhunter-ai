@@ -21,6 +21,10 @@ __pycache__/
 venv/
 .venv/
 
+# Cold Storage Archives
+multitenant_revops/archive_cold_storage/
+archive_cold_storage/
+
 # OS specific
 .DS_Store
 Thumbs.db
