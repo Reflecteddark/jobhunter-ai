@@ -1,0 +1,1437 @@
+{
+  "name": "JobHunter AI - HeadHunter Pipeline (9 Searches + DeepSeek R1 + Dual Google Sheets)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 2
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -4016,
+        -288
+      ],
+      "id": "c3fdfff2-74e3-4885-82ab-07b760efa826",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://api.hh.ru/vacancies",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "(\"руководитель отдела продаж\" OR \"Head of Sales\" OR \"начальник управления продаж\" OR \"директор по продажам\") AND (удалённо OR remote OR дистанционно)"
+            },
+            {
+              "name": "area",
+              "value": "113"
+            },
+            {
+              "name": "period",
+              "value": "7"
+            },
+            {
+              "name": "per_page",
+              "value": "100"
+            },
+            {
+              "name": "schedule",
+              "value": "remote"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "JobApp/1.0 (your-email@example.com)"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_HH_API_BEARER_TOKEN"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -3856,
+        -288
+      ],
+      "id": "05f8f79a-b43d-436f-9913-21cb978af406",
+      "name": "HH - РОП / Head of Sales",
+      "executeOnce": true,
+      "retryOnFail": true,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "url": "https://api.hh.ru/vacancies",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "(\"Business Development Manager\" OR \"BDM\" OR \"менеджер по развитию бизнеса\" OR \"директор по развитию бизнеса\") AND (Enterprise OR B2B) AND (удалённо OR remote OR дистанционно)"
+            },
+            {
+              "name": "area",
+              "value": "113"
+            },
+            {
+              "name": "period",
+              "value": "7"
+            },
+            {
+              "name": "per_page",
+              "value": "100"
+            },
+            {
+              "name": "schedule",
+              "value": "remote"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "JobApp/1.0 (your-email@example.com)"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_HH_API_BEARER_TOKEN"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -3536,
+        -288
+      ],
+      "id": "2bc762d7-740f-44bf-95e3-45ccf0ba6177",
+      "name": "HH - BDM / Развитие бизнеса",
+      "executeOnce": true,
+      "retryOnFail": true,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "url": "https://api.hh.ru/vacancies",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "(\"Key Account Manager\" OR \"KAM\" OR \"руководитель по работе с ключевыми клиентами\") AND (Enterprise OR B2B) AND (удалённо OR remote OR дистанционно)"
+            },
+            {
+              "name": "area",
+              "value": "113"
+            },
+            {
+              "name": "period",
+              "value": "7"
+            },
+            {
+              "name": "per_page",
+              "value": "100"
+            },
+            {
+              "name": "schedule",
+              "value": "remote"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "JobApp/1.0 (your-email@example.com)"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_HH_API_BEARER_TOKEN"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 50000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -3184,
+        -288
+      ],
+      "id": "6ee02f23-eaa3-4e2e-a20b-10e09a2f7e26",
+      "name": "HH - Key Account Enterprise",
+      "executeOnce": true,
+      "retryOnFail": true,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "url": "https://api.hh.ru/vacancies",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "(Fintech OR Финтех OR Банкинг OR Эквайринг OR \"платежные решения\") AND (продажи OR BDM OR РОП OR \"руководитель\") AND (удалённо OR remote OR дистанционно)"
+            },
+            {
+              "name": "area",
+              "value": "113"
+            },
+            {
+              "name": "period",
+              "value": "7"
+            },
+            {
+              "name": "per_page",
+              "value": "100"
+            },
+            {
+              "name": "schedule",
+              "value": "remote"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "JobApp/1.0 (your-email@example.com)"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_HH_API_BEARER_TOKEN"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2864,
+        -288
+      ],
+      "id": "d25efb71-b460-41fc-94b9-85a3389c6eed",
+      "name": "HH - FinTech & Banking B2B",
+      "executeOnce": true,
+      "retryOnFail": true,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "url": "https://api.hh.ru/vacancies",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "(SaaS OR Cloud OR IT OR \"облачные решения\" OR \"Enterprise software\" OR AI) AND (\"директор по продажам\" OR \"руководитель отдела продаж\" OR \"Enterprise Sales\" OR BDM) AND (удалённо OR remote OR дистанционно)"
+            },
+            {
+              "name": "area",
+              "value": "113"
+            },
+            {
+              "name": "period",
+              "value": "7"
+            },
+            {
+              "name": "per_page",
+              "value": "100"
+            },
+            {
+              "name": "schedule",
+              "value": "remote"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "JobApp/1.0 (your-email@example.com)"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_HH_API_BEARER_TOKEN"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2512,
+        -288
+      ],
+      "id": "2b2b3d21-c7da-4ebe-9ab9-b3a2c32b31e8",
+      "name": "HH - IT & SaaS Enterprise",
+      "executeOnce": true,
+      "retryOnFail": true,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "url": "https://api.hh.ru/vacancies",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "(\"менеджер по продажам\" OR \"sales manager\") AND (Fintech OR SaaS OR IT OR B2B) AND (удалённо OR remote OR дистанционно)"
+            },
+            {
+              "name": "area",
+              "value": "113"
+            },
+            {
+              "name": "period",
+              "value": "7"
+            },
+            {
+              "name": "per_page",
+              "value": "100"
+            },
+            {
+              "name": "schedule",
+              "value": "remote"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "JobApp/1.0 (your-email@example.com)"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_HH_API_BEARER_TOKEN"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -3824,
+        -64
+      ],
+      "id": "c01f54f7-5bb6-44b6-b98c-a18aa0b27ac6",
+      "name": "HH - Продажи Fintech & SaaS",
+      "executeOnce": true,
+      "retryOnFail": true,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "url": "https://api.hh.ru/vacancies",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "(\"менеджер по работе с партнерами\" OR \"менеджер по работе с партнёрами\" OR \"Partner Account Manager\" OR \"руководитель партнерской сети\") AND (удалённо OR remote OR дистанционно)"
+            },
+            {
+              "name": "area",
+              "value": "113"
+            },
+            {
+              "name": "period",
+              "value": "7"
+            },
+            {
+              "name": "per_page",
+              "value": "100"
+            },
+            {
+              "name": "schedule",
+              "value": "remote"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "JobApp/1.0 (your-email@example.com)"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_HH_API_BEARER_TOKEN"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -3360,
+        -64
+      ],
+      "id": "1765d93d-e77f-43f4-9544-ac970a046a1c",
+      "name": "HH - Партнёрские продажи",
+      "executeOnce": true,
+      "retryOnFail": true,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "url": "https://api.hh.ru/vacancies",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "(\"менеджер по работе с ключевыми клиентами\" OR \"ведущий менеджер по работе с клиентами\") AND (Enterprise OR B2B OR корпоративный) AND (удалённо OR remote OR дистанционно)"
+            },
+            {
+              "name": "area",
+              "value": "113"
+            },
+            {
+              "name": "period",
+              "value": "7"
+            },
+            {
+              "name": "per_page",
+              "value": "100"
+            },
+            {
+              "name": "schedule",
+              "value": "remote"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "JobApp/1.0 (your-email@example.com)"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_HH_API_BEARER_TOKEN"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2992,
+        -64
+      ],
+      "id": "efccd8b6-e021-43f4-bb85-8f91761445db",
+      "name": "HH - Ключевые клиенты B2B",
+      "executeOnce": true,
+      "retryOnFail": true,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit?gid=63486232#gid=63486232",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 63486232,
+          "mode": "list",
+          "cachedResultName": "JobHunt_РОП",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit#gid=63486232"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -3950,
+        224
+      ],
+      "id": "d0a7bbdd-0e14-4b1d-86ad-4115c37bdb82",
+      "name": "Google Sheets Read",
+      "executeOnce": true,
+      "credentials": {
+        "googleApi": {
+          "id": "lbGgYppJZkZJI2Uo",
+          "name": "Google Service Account account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Получаем существующие ID из обеих вкладок таблицы (JobHunt_РОП и JobHunt_Rejected)\nlet existingIds = new Set();\ntry {\n  // ID из вкладки JobHunt_Rejected (пришли на вход как $input.all())\n  const rejectedItems = $input.all();\n  for (const item of rejectedItems) {\n    const id = String(item.json.vacancy_id || '').trim();\n    if (id) existingIds.add(id);\n  }\n\n  // ID из вкладки JobHunt_РОП (берем из узла 'Code - Aggregate Ready IDs')\n  const readyIds = $('Code - Aggregate Ready IDs').first().json.readyIds || [];\n  for (const id of readyIds) {\n    const idStr = String(id || '').trim();\n    if (idStr) existingIds.add(idStr);\n  }\n\n  console.log('Уникальных ID из обеих вкладок таблицы:', existingIds.size);\n} catch (e) {\n  console.log('Ошибка чтения таблиц:', e.message);\n  existingIds = new Set();\n}\n\n// 2. Имена всех 9 нод поиска\nconst searchNodeNames = [\n  'HH - РОП / Head of Sales',\n  'HH - BDM / Развитие бизнеса',\n  'HH - Key Account Enterprise',\n  'HH - FinTech & Banking B2B',\n  'HH - IT & SaaS Enterprise',\n  'HH - Продажи Fintech & SaaS',\n  'HH - Партнёрские продажи',\n  'HH - Ключевые клиенты B2B',\n  'HH - Менеджер по продажам'\n];\n\nlet allRawVacancies = [];\nfor (const name of searchNodeNames) {\n  try {\n    const nodeResults = $(name).all();\n    for (const res of nodeResults) {\n      if (res.json && Array.isArray(res.json.items)) {\n        allRawVacancies.push(...res.json.items);\n      } else if (res.json && res.json.id) {\n        allRawVacancies.push(res.json);\n      }\n    }\n  } catch (err) {\n    console.log(`Нода ${name} еще не выполнена`);\n  }\n}\n\nconsole.log(`Всего собрано вакансий с 9 поисков: ${allRawVacancies.length}`);\n\n// 3. Отбираем только УНИКАЛЬНЫЕ вакансии\nconst uniqueItems = [];\nconst seenInCurrentRun = new Set();\n\nfor (const vacancy of allRawVacancies) {\n  const id = String(vacancy.id || '');\n  if (id && !existingIds.has(id) && !seenInCurrentRun.has(id)) {\n    seenInCurrentRun.add(id);\n    uniqueItems.push({ json: { id: id } });\n  }\n}\n\nconsole.log(`Новых уникальных вакансий: ${uniqueItems.length}`);\nreturn uniqueItems;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3350,
+        224
+      ],
+      "id": "cc8b9f8d-e82a-4576-9b53-a4902c8951c8",
+      "name": "Code - Deduplication"
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -3150,
+        224
+      ],
+      "id": "6d78b9f8-8b41-4b68-b3e8-d3c704c2d22a",
+      "name": "Loop Over Items (по 1 шт)"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.hh.ru/vacancies/{{ $json.id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "JobApp/1.0 (your-email@example.com)"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_HH_API_BEARER_TOKEN"
+            }
+          ]
+        },
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 2000
+            }
+          },
+          "timeout": 60000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2950,
+        240
+      ],
+      "id": "fd440d29-3679-4a01-8b9d-d1051b70dd73",
+      "name": "HTTP - HH Details",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:11434/api/chat",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.ollamaBody) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2528,
+        240
+      ],
+      "id": "49db2c24-223f-4f2c-b609-feea2322a767",
+      "name": "Ollama DeepSeek",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "let hhData = {};\ntry {\n  hhData = $('HTTP - HH Details').item.json;\n} catch (e) {\n  hhData = {};\n}\n\nconst item = $input.item.json;\nlet raw = \"\";\n\nif (typeof item === \"string\") {\n  raw = item;\n} else if (item.message && typeof item.message.content === \"string\") {\n  raw = item.message.content;\n} else if (typeof item.response === \"string\") {\n  raw = item.response;\n} else if (typeof item.output === \"string\") {\n  raw = item.output;\n} else {\n  raw = JSON.stringify(item);\n}\n\n// Надёжное удаление блока think (включая незакрытый <think>)\nif (raw.includes(\"</think>\")) {\n  raw = raw.split(\"</think>\")[1];\n} else if (raw.includes(\"<think>\")) {\n  raw = raw.replace(/<think>[\\s\\S]*?(?:<\\/think>|$)/gi, \"\");\n}\n\nraw = raw.replace(/```json/gi, \"\").replace(/```/g, \"\").trim();\n\n// Поиск JSON\nlet parsed = {};\nconst match = raw.match(/\\{[\\s\\S]*\\}/);\nif (match) {\n  try {\n    parsed = JSON.parse(match[0]);\n  } catch (e) {\n    parsed = {};\n  }\n}\n\n// Надёжное извлечение is_relevant с фоллбэком по тексту\nlet isRelevant = false;\nif (typeof parsed.is_relevant === \"boolean\") {\n  isRelevant = parsed.is_relevant;\n} else if (parsed.is_relevant !== undefined && parsed.is_relevant !== null) {\n  isRelevant = String(parsed.is_relevant).toLowerCase() === \"true\";\n} else {\n  // Фоллбэк: прямой regex по тексту ответа\n  const relMatch = raw.match(/\"is_relevant\"\\s*:\\s*(true|false)/i);\n  if (relMatch) {\n    isRelevant = relMatch[1].toLowerCase() === \"true\";\n  }\n}\n\n// Извлечение причины отказа\nlet rejectReason = parsed.reject_reason;\nif (!rejectReason && !isRelevant) {\n  const reasonMatch = raw.match(/\"reject_reason\"\\s*:\\s*\"([^\"]+)\"/i);\n  rejectReason = reasonMatch ? reasonMatch[1] : \"Не соответствует критериям\";\n}\n\n// Извлечение питча\nlet pitch = parsed.pitch || \"\";\nif (!pitch && isRelevant) {\n  const pitchMatch = raw.match(/\"pitch\"\\s*:\\s*\"([^\"]+)\"/i);\n  pitch = pitchMatch ? pitchMatch[1] : \"\";\n}\n\n// Очистка питча от шаблонного мусора если нейросеть всё же написала \"Здравствуйте\"\npitch = pitch.replace(/^(Здравствуйте|Добрый день)[,.]?\\s*/i, \"\").trim();\n\nreturn {\n  json: {\n    ...hhData,\n    is_relevant: isRelevant,\n    reject_reason: isRelevant ? null : (rejectReason || \"Не соответствует критериям\"),\n    pitch: isRelevant ? pitch : \"\"\n  }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2320,
+        240
+      ],
+      "id": "c73bdc67-780a-4a20-9acb-9e364978c179",
+      "name": "Code - Parse LLM"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "relevant_check",
+              "leftValue": "={{ $json.is_relevant }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2080,
+        240
+      ],
+      "id": "d36994b4-7d46-4f38-90e2-9e19817e8839",
+      "name": "IF Relevant"
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit?gid=1437518602#gid=1437518602",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 63486232,
+          "mode": "list",
+          "cachedResultName": "JobHunt_РОП",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit#gid=63486232"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "vacancy_id": "={{ $json.id }}",
+            "created_at": "={{ $now.setZone('Europe/Moscow').format('yyyy-MM-dd HH:mm') }}",
+            "company": "={{ $json.employer?.name || 'Не указана' }}",
+            "role": "={{ $json.name }}",
+            "salary": "={{ $json.salary ? (($json.salary.from ? 'от ' + $json.salary.from : '') + ($json.salary.to ? ' до ' + $json.salary.to : '') + ' ' + ($json.salary.currency || 'RUR')) : 'Не указана' }}",
+            "url": "={{ $json.alternate_url }}",
+            "status": "READY",
+            "pitch_or_reason": "={{ $json.pitch }}",
+            "my_status": "⚪ Новая"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "vacancy_id",
+              "displayName": "vacancy_id",
+              "type": "string"
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "type": "string"
+            },
+            {
+              "id": "company",
+              "displayName": "company",
+              "type": "string"
+            },
+            {
+              "id": "role",
+              "displayName": "role",
+              "type": "string"
+            },
+            {
+              "id": "salary",
+              "displayName": "salary",
+              "type": "string"
+            },
+            {
+              "id": "url",
+              "displayName": "url",
+              "type": "string"
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "type": "string"
+            },
+            {
+              "id": "pitch_or_reason",
+              "displayName": "pitch_or_reason",
+              "type": "string"
+            },
+            {
+              "id": "my_status",
+              "displayName": "my_status",
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -1824,
+        224
+      ],
+      "id": "3f655c31-efab-4ca2-a225-ee2c51170999",
+      "name": "Google Sheets - Ready",
+      "credentials": {
+        "googleApi": {
+          "id": "lbGgYppJZkZJI2Uo",
+          "name": "Google Service Account account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit?gid=63430195#gid=63430195",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 63430195,
+          "mode": "list",
+          "cachedResultName": "JobHunt_Rejected",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit?gid=63430195"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "vacancy_id": "={{ $json.id }}",
+            "created_at": "={{ $now.setZone('Europe/Moscow').format('yyyy-MM-dd HH:mm') }}",
+            "company": "={{ $json.employer?.name || 'Не указана' }}",
+            "role": "={{ $json.name }}",
+            "salary": "={{ $json.salary ? (($json.salary.from ? 'от ' + $json.salary.from : '') + ($json.salary.to ? ' до ' + $json.salary.to : '') + ' ' + ($json.salary.currency || 'RUR')) : 'Не указана' }}",
+            "url": "={{ $json.alternate_url }}",
+            "status": "REJECTED",
+            "pitch_or_reason": "={{ $json.reject_reason }}",
+            "my_status": ""
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "vacancy_id",
+              "displayName": "vacancy_id",
+              "type": "string"
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "type": "string"
+            },
+            {
+              "id": "company",
+              "displayName": "company",
+              "type": "string"
+            },
+            {
+              "id": "role",
+              "displayName": "role",
+              "type": "string"
+            },
+            {
+              "id": "salary",
+              "displayName": "salary",
+              "type": "string"
+            },
+            {
+              "id": "url",
+              "displayName": "url",
+              "type": "string"
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "type": "string"
+            },
+            {
+              "id": "pitch_or_reason",
+              "displayName": "pitch_or_reason",
+              "type": "string"
+            },
+            {
+              "id": "my_status",
+              "displayName": "my_status",
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -1808,
+        432
+      ],
+      "id": "6eb0dc95-c8ee-4df6-8835-dfe1cf83d7c3",
+      "name": "Google Sheets - Rejected",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "googleApi": {
+          "id": "lbGgYppJZkZJI2Uo",
+          "name": "Google Service Account account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Code - Prepare Ollama Body (HeadHunter)\nconst hhData = $input.item.json;\n\n// Чистим HTML из описания\nconst rawDescription = String(hhData.description || \"\");\nconst cleanDescription = rawDescription.replace(/<[^>]*>?/gm, \" \").trim();\n\nconst salaryInfo = hhData.salary \n  ? ((hhData.salary.from ? 'от ' + hhData.salary.from : '') + (hhData.salary.to ? ' до ' + hhData.salary.to : '') + ' ' + (hhData.salary.currency || 'RUR'))\n  : 'не указана';\n\nconst userContent = [\n  \"ВАКАНСИЯ (HeadHunter):\",\n  \"Должность: \" + (hhData.name || \"\"),\n  \"Компания: \" + (hhData.employer?.name || \"\"),\n  \"Зарплата: \" + salaryInfo,\n  \"Описание: \" + cleanDescription.slice(0, 6000),\n  \"\",\n  \"Оцени вакансию и верни строго JSON на русском языке.\"\n].join(\"\\n\");\n\nconst systemPrompt = `Ты — строгий карьерный эксперт и фильтр вакансий для Дмитрия Федотова (Ex-Yandex, Ex-Ozon Fintech, B2B-продажи, коммерческое руководство).\n\nКРИТЕРИИ ПРИЁМА (все должны выполняться):\n1. ФОРМАТ РАБОТЫ (СТРОЖАЙШЕ): ТОЛЬКО 100% ПОЛНАЯ УДАЛЁНКА (Remote / из дома).\n- Подходит: полная удалённая работа из любого города/страны.\n- СТРОГИЙ ОТКАЗ: любой гибрид (даже 1-2 дня в неделю в офисе), работа в офисе, испытательный срок / стажировка в офисе, разъездной формат, вахта (причина: \"Не удаленка / гибрид / офис\").\n- Если в тексте указано \"удаленно не работаем\", \"только в офисе\", \"гибридный график\", \"стажировка в офисе\" — СТРОГИЙ ОТКАЗ (причина: \"Не удаленка / гибрид / офис\").\n2. ГРАФИК РАБОТЫ:\n- Только 5/2 (пятидневка).\n- Если график в тексте НЕ указан — ПРОПУСКАЙ (считай, что подходит 5/2).\n- СТРОГИЙ ОТКАЗ: сменный график, 2/2, 3/3, 1/3, по сменам, ночные смены (причина: \"График не 5/2\").\n3. РОЛЬ (B2B И РУКОВОДСТВО):\n- РОП / Head of Sales / Коммерческий директор / BDM / Key Account Manager / Партнёрские продажи / Enterprise Sales / Менеджер по продажам B2B. Линейный менеджер допустим, только если B2B и фикс от 100 000 ₽.\n4. ЗАРПЛАТА И ФИКС (СТРОГО):\n- Фикс / оклад — СТРОГО от 100 000 ₽.\n- Совокупный доход (фикс + KPI/бонусы/проценты) — от 150 000 ₽.\n- Если оклад/фикс явно указан ниже 100 000 ₽ (например, 30к, 40к, 50к, 60к, 80к) — СТРОГИЙ ОТКАЗ (причина: \"Фикс ниже 100 000 ₽\").\n- Если оклад/фикс в тексте НЕ указан — ПРИНИМАЙ ТОЛЬКО если роль руководящая (РОП, Head of Sales, BDM, Коммерческий директор) в B2B.\n- СТРОГИЙ ОТКАЗ: работа только за процент / без оклада / только комиссия (причина: \"Нет оклада / только процент\").\n\nСТРОГИЙ ОТКАЗ (любой пункт = reject_reason):\n- Онлайн-школы, курсы, детские центры, EdTech B2C, инфобизнес, наставничество, коучинг, продажа вебинаров (причина: \"Инфобиз / онлайн-школа / курсы\")\n- Крипта, криптовалюты, crypto, Web3, блокчейн, криптобиржи, трейдинг, p2p, арбитраж, гемблинг (причина: \"Крипта / трейдинг / Web3 / гемблинг\")\n- Фикс ниже 100 000 ₽ или только процент без оклада (причина: \"Фикс ниже 100 000 ₽\" или \"Нет фикса / только процент\")\n- График не 5/2 (2/2, сменный, по сменам) (причина: \"График не 5/2\")\n- Обязательное свободное знание иностранных языков (C1/Fluent) как требование (если \"плюс\" — допустимо)\n- Оплата только процент / без фиксированного оклада\n- Холодный обзвон на телефоне как основная функция\n- Стажёр / junior / ассистент\n- Вакансия не связана с B2B-продажами или развитием бизнеса\n- 100% строгий офис без удалёнки\n\nСВОДКА ВАКАНСИИ (поле \"pitch\", заполнять ТОЛЬКО если is_relevant: true):\nНи в коем случае НЕ пиши сопроводительное письмо или почему кандидат подходит (НЕ упоминай опыт кандидата, Яндекс, Ozon и т.д.).\nКандидату нужен короткий структурированный обзор САМОЙ вакансии для быстрого сканирования таблицы глазами.\nФормат строго из 3 пунктов в одну строку через разделители:\n🏢 Бизнес: [сфера компании и продукт] | 💰 Доход: [оклад/фикс, KPI, совокупный доход или условия] | 🎯 Задачи: [2-3 главные конкретные обязанности]\n\nПример:\n\"🏢 Бизнес: B2B-логистика и грузоперевозки (Скиф-Карго) | 💰 Доход: фикс от 120 000 ₽ + KPI (от 250 000 ₽) | 🎯 Задачи: перезапуск активных B2B-продаж, развитие пула ключевых клиентов, руководство коммерческим отделом\"\n\n- В блоке think думай предельно кратко (до 40-60 слов).\nОтвечай ТОЛЬКО валидным JSON:\n{\n  \"is_relevant\": true/false,\n  \"reject_reason\": \"одна конкретная причина отказа или null\",\n  \"pitch\": \"текст сводки о вакансии или пустая строка\"\n}`;\n\nconst body = {\n  model: \"deepseek-r1:14b-24k\",\n  format: \"json\",\n  stream: false,\n  options: {\n    num_ctx: 24576,\n    num_predict: 1536,\n    temperature: 0.1\n  },\n  messages: [\n    { role: \"system\", content: systemPrompt },\n    { role: \"user\", content: userContent }\n  ]\n};\n\nreturn {\n  json: {\n    ollamaBody: body,\n    ...hhData\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2736,
+        240
+      ],
+      "id": "accd1f0e-ccea-43d3-ba59-1d95791eba83",
+      "name": "Prepare Ollama Body"
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -2976,
+        240
+      ],
+      "id": "c6d4e577-a34d-4c13-b66c-ba4ebda15449",
+      "name": "Wait 1 sec",
+      "webhookId": "wait-webhook-jobhunter"
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -3696,
+        -288
+      ],
+      "id": "424014b7-dd04-463a-a15f-53391aae6172",
+      "name": "Wait",
+      "webhookId": "wait-webhook-jobhunter"
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -3360,
+        -288
+      ],
+      "id": "36e29db5-7999-4552-944e-fc8239778881",
+      "name": "Wait1",
+      "webhookId": "wait-webhook-jobhunter"
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -3024,
+        -288
+      ],
+      "id": "d078f587-206b-4aca-b2e0-09e3bd5b9d66",
+      "name": "Wait2",
+      "webhookId": "wait-webhook-jobhunter"
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -2688,
+        -288
+      ],
+      "id": "9cedffaa-d161-4d69-bec8-114709d72b9f",
+      "name": "Wait3",
+      "webhookId": "wait-webhook-jobhunter"
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -4016,
+        -64
+      ],
+      "id": "192d284b-6c62-49b7-9604-71291cad36ed",
+      "name": "Wait4",
+      "webhookId": "wait-webhook-jobhunter"
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -3632,
+        -64
+      ],
+      "id": "dba2d224-7dc9-4aea-bec0-6e6fa656c38d",
+      "name": "Wait5",
+      "webhookId": "wait-webhook-jobhunter"
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -3168,
+        -64
+      ],
+      "id": "1aa171f1-3f1e-44a4-a57c-b8df202641b7",
+      "name": "Wait6",
+      "webhookId": "wait-webhook-jobhunter"
+    },
+    {
+      "parameters": {
+        "amount": 1,
+        "unit": "seconds"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -2800,
+        -64
+      ],
+      "id": "0ef9847d-f831-4769-890a-c8f9b06db874",
+      "name": "Wait7"
+    },
+    {
+      "parameters": {
+        "url": "https://api.hh.ru/vacancies",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "(\"менеджер по продажам\" OR \"ведущий менеджер по продажам\" OR \"менеджер по B2B продажам\") AND (B2B OR \"корпоративные продажи\" OR \"крупный бизнес\" OR Enterprise) AND (удалённо OR remote OR дистанционно)"
+            },
+            {
+              "name": "area",
+              "value": "113"
+            },
+            {
+              "name": "period",
+              "value": "7"
+            },
+            {
+              "name": "per_page",
+              "value": "100"
+            },
+            {
+              "name": "schedule",
+              "value": "remote"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "JobApp/1.0 (your-email@example.com)"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_HH_API_BEARER_TOKEN"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2600,
+        -64
+      ],
+      "id": "24931ae1-310c-4748-8205-f140206a905e",
+      "name": "HH - Менеджер по продажам"
+    },
+    {
+      "parameters": {
+        "jsCode": "const sheetItems = $input.all();\nconst ids = sheetItems\n  .map(item => String(item.json.vacancy_id || '').trim())\n  .filter(id => id.length > 0);\nconsole.log('Считано ID из JobHunt_РОП:', ids.length);\nreturn [{ json: { readyIds: ids } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3750,
+        224
+      ],
+      "id": "8170ff99-6ae0-4b19-b54c-c1bd5252467a",
+      "name": "Code - Aggregate Ready IDs"
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit?gid=63430195#gid=63430195",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 63430195,
+          "mode": "list",
+          "cachedResultName": "JobHunt_Rejected",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit?gid=63430195"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -3550,
+        224
+      ],
+      "id": "e07beede-ea89-4633-a25d-5ba1f38b72d7",
+      "name": "Google Sheets Read - Rejected",
+      "credentials": {
+        "googleApi": {
+          "id": "lbGgYppJZkZJI2Uo",
+          "name": "Google Service Account account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HH - РОП / Head of Sales",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HH - РОП / Head of Sales": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HH - BDM / Развитие бизнеса": {
+      "main": [
+        [
+          {
+            "node": "Wait1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HH - Key Account Enterprise": {
+      "main": [
+        [
+          {
+            "node": "Wait2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HH - FinTech & Banking B2B": {
+      "main": [
+        [
+          {
+            "node": "Wait3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HH - IT & SaaS Enterprise": {
+      "main": [
+        [
+          {
+            "node": "Wait4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HH - Продажи Fintech & SaaS": {
+      "main": [
+        [
+          {
+            "node": "Wait5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HH - Партнёрские продажи": {
+      "main": [
+        [
+          {
+            "node": "Wait6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HH - Ключевые клиенты B2B": {
+      "main": [
+        [
+          {
+            "node": "Wait7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets Read": {
+      "main": [
+        [
+          {
+            "node": "Code - Aggregate Ready IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Deduplication": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items (по 1 шт)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items (по 1 шт)": {
+      "main": [
+        [],
+        [
+          {
+            "node": "HTTP - HH Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP - HH Details": {
+      "main": [
+        [
+          {
+            "node": "Wait 1 sec",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama DeepSeek": {
+      "main": [
+        [
+          {
+            "node": "Code - Parse LLM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Parse LLM": {
+      "main": [
+        [
+          {
+            "node": "IF Relevant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Relevant": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Ready",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Google Sheets - Rejected",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Ready": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items (по 1 шт)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Rejected": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items (по 1 шт)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Ollama Body": {
+      "main": [
+        [
+          {
+            "node": "Ollama DeepSeek",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 1 sec": {
+      "main": [
+        [
+          {
+            "node": "Prepare Ollama Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "HH - BDM / Развитие бизнеса",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait1": {
+      "main": [
+        [
+          {
+            "node": "HH - Key Account Enterprise",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait2": {
+      "main": [
+        [
+          {
+            "node": "HH - FinTech & Banking B2B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait3": {
+      "main": [
+        [
+          {
+            "node": "HH - IT & SaaS Enterprise",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait4": {
+      "main": [
+        [
+          {
+            "node": "HH - Продажи Fintech & SaaS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait5": {
+      "main": [
+        [
+          {
+            "node": "HH - Партнёрские продажи",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait6": {
+      "main": [
+        [
+          {
+            "node": "HH - Ключевые клиенты B2B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait7": {
+      "main": [
+        [
+          {
+            "node": "HH - Менеджер по продажам",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HH - Менеджер по продажам": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets Read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Aggregate Ready IDs": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets Read - Rejected",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets Read - Rejected": {
+      "main": [
+        [
+          {
+            "node": "Code - Deduplication",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

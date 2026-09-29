@@ -1,0 +1,27 @@
+# Credentials and secrets
+*.json.key
+service_account.json
+*.key
+*.pem
+.env
+.env.*
+!.env.example
+
+# n8n runtime and local files
+*.sqlite
+*.sqlite3
+*.log
+n8n_output.log
+n8n_err.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+
+# OS specific
+.DS_Store
+Thumbs.db
+desktop.ini
