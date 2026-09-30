@@ -518,21 +518,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        224,
-        608
-      ]
-    },
-    {
-      "parameters": {
-        "options": {}
-      },
-      "id": "ad0363f2-230d-452f-a939-e007f4f6bbe2",
-      "name": "Loop Over Items (по 1 шт)",
-      "type": "n8n-nodes-base.splitInBatches",
-      "typeVersion": 3,
-      "position": [
-        448,
-        608
+        -500,
+        240
       ]
     },
     {
@@ -565,8 +552,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        1344,
-        608
+        0,
+        240
       ]
     },
     {
@@ -656,8 +643,8 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
-        1632,
-        592
+        250,
+        240
       ],
       "credentials": {
         "googleApi": {
@@ -677,7 +664,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -300,
+        -250,
         240
       ],
       "id": "code-fast-eval-tg",
@@ -920,18 +907,6 @@
       "main": [
         [
           {
-            "node": "Loop Over Items (по 1 шт)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Loop Over Items (по 1 шт)": {
-      "main": [
-        [],
-        [
-          {
             "node": "Code - Fast Evaluator",
             "type": "main",
             "index": 0
@@ -948,24 +923,12 @@
             "index": 0
           }
         ],
-        [
-          {
-            "node": "Loop Over Items (по 1 шт)",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        []
       ]
     },
     "Google Sheets - Append": {
       "main": [
-        [
-          {
-            "node": "Loop Over Items (по 1 шт)",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        []
       ]
     },
     "Code - Fast Evaluator": {

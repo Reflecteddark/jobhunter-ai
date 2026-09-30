@@ -525,25 +525,11 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -3350,
-        224
+        -2800,
+        240
       ],
       "id": "cc8b9f8d-e82a-4576-9b53-a4902c8951c8",
       "name": "Code - Deduplication"
-    },
-    {
-      "parameters": {
-        "batchSize": 1,
-        "options": {}
-      },
-      "type": "n8n-nodes-base.splitInBatches",
-      "typeVersion": 3,
-      "position": [
-        -3150,
-        224
-      ],
-      "id": "6d78b9f8-8b41-4b68-b3e8-d3c704c2d22a",
-      "name": "Loop Over Items (по 1 шт)"
     },
     {
       "parameters": {
@@ -564,8 +550,8 @@
         "options": {
           "batching": {
             "batch": {
-              "batchSize": 1,
-              "batchInterval": 2000
+              "batchSize": 4,
+              "batchInterval": 1000
             }
           },
           "timeout": 60000
@@ -574,14 +560,14 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -2950,
+        -2500,
         240
       ],
       "id": "fd440d29-3679-4a01-8b9d-d1051b70dd73",
       "name": "HTTP - HH Details",
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 5000
+      "waitBetweenTries": 2000
     },
     {
       "parameters": {
@@ -611,8 +597,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        -2000,
-        160
+        -1900,
+        240
       ],
       "id": "d36994b4-7d46-4f38-90e2-9e19817e8839",
       "name": "IF Relevant"
@@ -702,8 +688,8 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
-        -1824,
-        224
+        -1600,
+        140
       ],
       "id": "3f655c31-efab-4ca2-a225-ee2c51170999",
       "name": "Google Sheets - Ready",
@@ -802,8 +788,8 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
-        -1808,
-        432
+        -1600,
+        340
       ],
       "id": "6eb0dc95-c8ee-4df6-8835-dfe1cf83d7c3",
       "name": "Google Sheets - Rejected",
@@ -816,20 +802,6 @@
         }
       },
       "maxTries": 3
-    },
-    {
-      "parameters": {
-        "amount": 2
-      },
-      "type": "n8n-nodes-base.wait",
-      "typeVersion": 1.1,
-      "position": [
-        -2976,
-        240
-      ],
-      "id": "c6d4e577-a34d-4c13-b66c-ba4ebda15449",
-      "name": "Wait 1 sec",
-      "webhookId": "wait-webhook-jobhunter"
     },
     {
       "parameters": {
@@ -1047,7 +1019,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -2400,
+        -2200,
         240
       ],
       "id": "code-fast-evaluator-node",
@@ -1169,18 +1141,6 @@
       "main": [
         [
           {
-            "node": "Loop Over Items (по 1 шт)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Loop Over Items (по 1 шт)": {
-      "main": [
-        [],
-        [
-          {
             "node": "HTTP - HH Details",
             "type": "main",
             "index": 0
@@ -1192,7 +1152,7 @@
       "main": [
         [
           {
-            "node": "Wait 1 sec",
+            "node": "Code - Fast Evaluator",
             "type": "main",
             "index": 0
           }
@@ -1219,35 +1179,12 @@
     },
     "Google Sheets - Ready": {
       "main": [
-        [
-          {
-            "node": "Loop Over Items (по 1 шт)",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        []
       ]
     },
     "Google Sheets - Rejected": {
       "main": [
-        [
-          {
-            "node": "Loop Over Items (по 1 шт)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Wait 1 sec": {
-      "main": [
-        [
-          {
-            "node": "Code - Fast Evaluator",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        []
       ]
     },
     "Wait": {
