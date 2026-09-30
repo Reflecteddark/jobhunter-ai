@@ -56,7 +56,8 @@
     },
     {
       "parameters": {
-        "amount": 1,
+        "resume": "timeInterval",
+        "amount": 2,
         "unit": "seconds"
       },
       "id": "0fcd6858-d2f6-47b0-a006-a6e510404c0c",
@@ -104,7 +105,8 @@
     },
     {
       "parameters": {
-        "amount": 1,
+        "resume": "timeInterval",
+        "amount": 2,
         "unit": "seconds"
       },
       "id": "6c5bf5f8-5216-455c-976a-9b1bcdbdaed5",
@@ -152,7 +154,8 @@
     },
     {
       "parameters": {
-        "amount": 1,
+        "resume": "timeInterval",
+        "amount": 2,
         "unit": "seconds"
       },
       "id": "3c9970e0-f6ec-4cc0-8467-362ffff3f392",
@@ -200,7 +203,8 @@
     },
     {
       "parameters": {
-        "amount": 1,
+        "resume": "timeInterval",
+        "amount": 2,
         "unit": "seconds"
       },
       "id": "cacad57b-bd94-496d-9f05-6f30c891e69a",
@@ -248,7 +252,8 @@
     },
     {
       "parameters": {
-        "amount": 1,
+        "resume": "timeInterval",
+        "amount": 2,
         "unit": "seconds"
       },
       "id": "63b56f35-4695-48c9-9b7b-b76f21c3bf82",
@@ -296,7 +301,8 @@
     },
     {
       "parameters": {
-        "amount": 1,
+        "resume": "timeInterval",
+        "amount": 2,
         "unit": "seconds"
       },
       "id": "ea646f41-1536-4552-b551-ceda18e94446",
@@ -344,7 +350,8 @@
     },
     {
       "parameters": {
-        "amount": 1,
+        "resume": "timeInterval",
+        "amount": 2,
         "unit": "seconds"
       },
       "id": "90b10c9a-f28b-4384-9c3f-cddf961f0d96",
@@ -392,7 +399,8 @@
     },
     {
       "parameters": {
-        "amount": 1,
+        "resume": "timeInterval",
+        "amount": 2,
         "unit": "seconds"
       },
       "id": "c352c103-e677-4da6-8286-dc7f92a077f7",
@@ -440,7 +448,8 @@
     },
     {
       "parameters": {
-        "amount": 1,
+        "resume": "timeInterval",
+        "amount": 2,
         "unit": "seconds"
       },
       "id": "6b5a86ac-f34e-44b2-8b24-ca09fa77b6be",

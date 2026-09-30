@@ -46,6 +46,10 @@
             {
               "name": "schedule",
               "value": "remote"
+            },
+            {
+              "name": "page",
+              "value": "0"
             }
           ]
         },
@@ -63,7 +67,26 @@
           ]
         },
         "options": {
-          "timeout": 30000
+          "timeout": 30000,
+          "pagination": {
+            "pagination": {
+              "paginationMode": "updateAParameterInEachRequest",
+              "parameters": {
+                "parameters": [
+                  {
+                    "type": "qs",
+                    "name": "page",
+                    "value": "={{ ($response.body.page || 0) + 1 }}"
+                  }
+                ]
+              },
+              "paginationCompleteWhen": "other",
+              "completeExpression": "={{ ($response.body.page + 1) >= $response.body.pages || ($response.body.items || []).length === 0 }}",
+              "limitPagesFetched": true,
+              "maxRequests": 10,
+              "requestInterval": 300
+            }
+          }
         }
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -106,6 +129,10 @@
             {
               "name": "schedule",
               "value": "remote"
+            },
+            {
+              "name": "page",
+              "value": "0"
             }
           ]
         },
@@ -123,7 +150,26 @@
           ]
         },
         "options": {
-          "timeout": 30000
+          "timeout": 30000,
+          "pagination": {
+            "pagination": {
+              "paginationMode": "updateAParameterInEachRequest",
+              "parameters": {
+                "parameters": [
+                  {
+                    "type": "qs",
+                    "name": "page",
+                    "value": "={{ ($response.body.page || 0) + 1 }}"
+                  }
+                ]
+              },
+              "paginationCompleteWhen": "other",
+              "completeExpression": "={{ ($response.body.page + 1) >= $response.body.pages || ($response.body.items || []).length === 0 }}",
+              "limitPagesFetched": true,
+              "maxRequests": 10,
+              "requestInterval": 300
+            }
+          }
         }
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -166,6 +212,10 @@
             {
               "name": "schedule",
               "value": "remote"
+            },
+            {
+              "name": "page",
+              "value": "0"
             }
           ]
         },
@@ -183,7 +233,26 @@
           ]
         },
         "options": {
-          "timeout": 50000
+          "timeout": 30000,
+          "pagination": {
+            "pagination": {
+              "paginationMode": "updateAParameterInEachRequest",
+              "parameters": {
+                "parameters": [
+                  {
+                    "type": "qs",
+                    "name": "page",
+                    "value": "={{ ($response.body.page || 0) + 1 }}"
+                  }
+                ]
+              },
+              "paginationCompleteWhen": "other",
+              "completeExpression": "={{ ($response.body.page + 1) >= $response.body.pages || ($response.body.items || []).length === 0 }}",
+              "limitPagesFetched": true,
+              "maxRequests": 10,
+              "requestInterval": 300
+            }
+          }
         }
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -226,6 +295,10 @@
             {
               "name": "schedule",
               "value": "remote"
+            },
+            {
+              "name": "page",
+              "value": "0"
             }
           ]
         },
@@ -243,7 +316,26 @@
           ]
         },
         "options": {
-          "timeout": 30000
+          "timeout": 30000,
+          "pagination": {
+            "pagination": {
+              "paginationMode": "updateAParameterInEachRequest",
+              "parameters": {
+                "parameters": [
+                  {
+                    "type": "qs",
+                    "name": "page",
+                    "value": "={{ ($response.body.page || 0) + 1 }}"
+                  }
+                ]
+              },
+              "paginationCompleteWhen": "other",
+              "completeExpression": "={{ ($response.body.page + 1) >= $response.body.pages || ($response.body.items || []).length === 0 }}",
+              "limitPagesFetched": true,
+              "maxRequests": 10,
+              "requestInterval": 300
+            }
+          }
         }
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -286,6 +378,10 @@
             {
               "name": "schedule",
               "value": "remote"
+            },
+            {
+              "name": "page",
+              "value": "0"
             }
           ]
         },
@@ -303,7 +399,26 @@
           ]
         },
         "options": {
-          "timeout": 30000
+          "timeout": 30000,
+          "pagination": {
+            "pagination": {
+              "paginationMode": "updateAParameterInEachRequest",
+              "parameters": {
+                "parameters": [
+                  {
+                    "type": "qs",
+                    "name": "page",
+                    "value": "={{ ($response.body.page || 0) + 1 }}"
+                  }
+                ]
+              },
+              "paginationCompleteWhen": "other",
+              "completeExpression": "={{ ($response.body.page + 1) >= $response.body.pages || ($response.body.items || []).length === 0 }}",
+              "limitPagesFetched": true,
+              "maxRequests": 10,
+              "requestInterval": 300
+            }
+          }
         }
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -346,6 +461,10 @@
             {
               "name": "schedule",
               "value": "remote"
+            },
+            {
+              "name": "page",
+              "value": "0"
             }
           ]
         },
@@ -363,7 +482,26 @@
           ]
         },
         "options": {
-          "timeout": 30000
+          "timeout": 30000,
+          "pagination": {
+            "pagination": {
+              "paginationMode": "updateAParameterInEachRequest",
+              "parameters": {
+                "parameters": [
+                  {
+                    "type": "qs",
+                    "name": "page",
+                    "value": "={{ ($response.body.page || 0) + 1 }}"
+                  }
+                ]
+              },
+              "paginationCompleteWhen": "other",
+              "completeExpression": "={{ ($response.body.page + 1) >= $response.body.pages || ($response.body.items || []).length === 0 }}",
+              "limitPagesFetched": true,
+              "maxRequests": 10,
+              "requestInterval": 300
+            }
+          }
         }
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -406,6 +544,10 @@
             {
               "name": "schedule",
               "value": "remote"
+            },
+            {
+              "name": "page",
+              "value": "0"
             }
           ]
         },
@@ -423,7 +565,26 @@
           ]
         },
         "options": {
-          "timeout": 30000
+          "timeout": 30000,
+          "pagination": {
+            "pagination": {
+              "paginationMode": "updateAParameterInEachRequest",
+              "parameters": {
+                "parameters": [
+                  {
+                    "type": "qs",
+                    "name": "page",
+                    "value": "={{ ($response.body.page || 0) + 1 }}"
+                  }
+                ]
+              },
+              "paginationCompleteWhen": "other",
+              "completeExpression": "={{ ($response.body.page + 1) >= $response.body.pages || ($response.body.items || []).length === 0 }}",
+              "limitPagesFetched": true,
+              "maxRequests": 10,
+              "requestInterval": 300
+            }
+          }
         }
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -466,6 +627,10 @@
             {
               "name": "schedule",
               "value": "remote"
+            },
+            {
+              "name": "page",
+              "value": "0"
             }
           ]
         },
@@ -483,7 +648,26 @@
           ]
         },
         "options": {
-          "timeout": 30000
+          "timeout": 30000,
+          "pagination": {
+            "pagination": {
+              "paginationMode": "updateAParameterInEachRequest",
+              "parameters": {
+                "parameters": [
+                  {
+                    "type": "qs",
+                    "name": "page",
+                    "value": "={{ ($response.body.page || 0) + 1 }}"
+                  }
+                ]
+              },
+              "paginationCompleteWhen": "other",
+              "completeExpression": "={{ ($response.body.page + 1) >= $response.body.pages || ($response.body.items || []).length === 0 }}",
+              "limitPagesFetched": true,
+              "maxRequests": 10,
+              "requestInterval": 300
+            }
+          }
         }
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -547,7 +731,8 @@
         240
       ],
       "id": "cc8b9f8d-e82a-4576-9b53-a4902c8951c8",
-      "name": "Code - Deduplication"
+      "name": "Code - Deduplication",
+      "executeOnce": true
     },
     {
       "parameters": {
@@ -829,7 +1014,8 @@
     },
     {
       "parameters": {
-        "amount": 1,
+        "resume": "timeInterval",
+        "amount": 2,
         "unit": "seconds"
       },
       "type": "n8n-nodes-base.wait",
@@ -843,7 +1029,8 @@
     },
     {
       "parameters": {
-        "amount": 1,
+        "resume": "timeInterval",
+        "amount": 2,
         "unit": "seconds"
       },
       "type": "n8n-nodes-base.wait",
@@ -857,7 +1044,8 @@
     },
     {
       "parameters": {
-        "amount": 1,
+        "resume": "timeInterval",
+        "amount": 2,
         "unit": "seconds"
       },
       "type": "n8n-nodes-base.wait",
@@ -871,7 +1059,8 @@
     },
     {
       "parameters": {
-        "amount": 1,
+        "resume": "timeInterval",
+        "amount": 2,
         "unit": "seconds"
       },
       "type": "n8n-nodes-base.wait",
@@ -885,7 +1074,8 @@
     },
     {
       "parameters": {
-        "amount": 1,
+        "resume": "timeInterval",
+        "amount": 2,
         "unit": "seconds"
       },
       "type": "n8n-nodes-base.wait",
@@ -899,7 +1089,8 @@
     },
     {
       "parameters": {
-        "amount": 1,
+        "resume": "timeInterval",
+        "amount": 2,
         "unit": "seconds"
       },
       "type": "n8n-nodes-base.wait",
@@ -913,7 +1104,8 @@
     },
     {
       "parameters": {
-        "amount": 1,
+        "resume": "timeInterval",
+        "amount": 2,
         "unit": "seconds"
       },
       "type": "n8n-nodes-base.wait",
@@ -927,7 +1119,8 @@
     },
     {
       "parameters": {
-        "amount": 1,
+        "resume": "timeInterval",
+        "amount": 2,
         "unit": "seconds"
       },
       "type": "n8n-nodes-base.wait",
@@ -964,6 +1157,10 @@
             {
               "name": "schedule",
               "value": "remote"
+            },
+            {
+              "name": "page",
+              "value": "0"
             }
           ]
         },
@@ -981,7 +1178,26 @@
           ]
         },
         "options": {
-          "timeout": 30000
+          "timeout": 30000,
+          "pagination": {
+            "pagination": {
+              "paginationMode": "updateAParameterInEachRequest",
+              "parameters": {
+                "parameters": [
+                  {
+                    "type": "qs",
+                    "name": "page",
+                    "value": "={{ ($response.body.page || 0) + 1 }}"
+                  }
+                ]
+              },
+              "paginationCompleteWhen": "other",
+              "completeExpression": "={{ ($response.body.page + 1) >= $response.body.pages || ($response.body.items || []).length === 0 }}",
+              "limitPagesFetched": true,
+              "maxRequests": 10,
+              "requestInterval": 300
+            }
+          }
         }
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -995,7 +1211,9 @@
       "retryOnFail": true,
       "executeOnce": true,
       "continueOnFail": true,
-      "onError": "continueRegularOutput"
+      "onError": "continueRegularOutput",
+      "maxTries": 3,
+      "waitBetweenTries": 5000
     },
     {
       "parameters": {
@@ -1029,12 +1247,13 @@
         }
       },
       "continueOnFail": true,
-      "onError": "continueRegularOutput"
+      "onError": "continueRegularOutput",
+      "executeOnce": true
     },
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// Code - Fast Evaluator & Pitch Generator (HeadHunter)\nconst hhData = $input.item.json;\n\n// 0. Защита от ошибок HTTP / отсутствия данных\nif (!hhData || hhData.error || !hhData.id) {\n  return {\n    json: {\n      id: (hhData && hhData.id) || 'error',\n      alternate_url: '',\n      name: 'Ошибка загрузки вакансии',\n      employer: { name: 'Неизвестно' },\n      salary: null,\n      is_relevant: false,\n      reject_reason: 'Ошибка API / Вакансия недоступна',\n      pitch: ''\n    }\n  };\n}\n\n// 1. Проверка архивности\nif (hhData.archived === true) {\n  return {\n    json: {\n      ...hhData,\n      is_relevant: false,\n      reject_reason: 'Вакансия в архиве',\n      pitch: ''\n    }\n  };\n}\n\nconst name = String(hhData.name || '');\nconst emp = String(hhData.employer?.name || '');\nconst rawDesc = String(hhData.description || '').replace(/<[^>]*>?/gm, ' ').replace(/\\s+/g, ' ').trim();\nconst fullText = (name + ' ' + emp + ' ' + rawDesc).toLowerCase();\n\n// === Регулярные выражения фильтров ===\nconst engRegex = /(анг[л-я]\\s+яз|анг[л-я]\\s+яп|анг[л-я]{2,4}\\s+b[12]|анг[л-я]{2,4}\\s+c[12]|анг[л-я]{2,4}\\s+int|анг[л-я]{2,4}\\s+adv|анг[л-я]*\\s+свободн|english\\s+(level|required|b1|b2|c1|c2|fluent|advanced|intermediate)|\\b(level\\s+)?(b2|c1|c2)\\b(?!\\s*b|\\w)|upper[- ]intermediate|\\badvanced\\s+english\\b|\\bfluent\\s+english\\b)/i;\nconst edtechRegex = /(онлайн[- ]?школ|edtech|skyeng|фоксфорд|tetrica|нетологи|skillbox|geekbrains|синерги|лайк\\s*центр|like\\s*центр|interneturok|maximum\\s+education|курс[а-я]*\\s+(английск|программир|дет|школьн|егэ|огэ|массаж|ai|it)|обучен[а-я]*\\s+детей\\s+(английск|программир|шахмат|ai|it|робототехник)|вебинар[а-я]*\\s+продаж|авто[- ]?вебинар|марафон[а-я]*\\s+продаж|интенсив|инфобиз|наставничеств|коучинг)/i;\nconst cryptoRegex = /(криптовалют|криптобирж|crypto|web3|блокчейн|p2p\\s+арбитраж|гемблинг|беттинг|казино)/i;\nconst badRolesRegex = /(стажер|junior|ассистент|помощник|холодн[а-я]*\\s+обзвон|оператор\\s+колл[- ]?центра|оператор\\s+на\\s+телефоне)/i;\n\n// 2. Проверка английского языка\nconst langs = Array.isArray(hhData.languages) ? hhData.languages : [];\nconst hasEng = langs.some(l => l.id === 'eng' || (l.name && l.name.toLowerCase().includes('англ')));\nif (hasEng || engRegex.test(fullText)) {\n  return { json: { ...hhData, is_relevant: false, reject_reason: \"Требуется знание английского языка\", pitch: \"\" } };\n}\n\n// 3. Проверка онлайн-школ и EdTech\nif (edtechRegex.test(fullText)) {\n  return { json: { ...hhData, is_relevant: false, reject_reason: \"Онлайн-школа / EdTech / Инфобиз\", pitch: \"\" } };\n}\n\n// 4. Проверка крипты и гемблинга\nif (cryptoRegex.test(fullText)) {\n  return { json: { ...hhData, is_relevant: false, reject_reason: \"Крипта / трейдинг / Web3 / гемблинг\", pitch: \"\" } };\n}\n\n// 5. Проверка нецелевых ролей (стажеры, ассистенты, колл-центр)\nif (badRolesRegex.test(name.toLowerCase())) {\n  return { json: { ...hhData, is_relevant: false, reject_reason: \"Нецелевая роль (стажер / ассистент / колл-центр)\", pitch: \"\" } };\n}\n\n// 6. Проверка формата (строго удаленка)\nconst isExplicitRemote = (hhData.schedule && hhData.schedule.id === 'remote') ||\n  (Array.isArray(hhData.work_format) && hhData.work_format.some(wf => wf.id === 'remote' || wf.name?.toLowerCase().includes('удален'))) ||\n  /100%\\s*удален|полная\\s+удален|только\\s+удален|удаленный\\s+формат|дистанционный\\s+формат/i.test(fullText);\nconst isExplicitOffice = /(только\\s+в\\s+офис|работа\\s+в\\s+офисе|офисный\\s+формат|на\\s+территории\\s+работодателя|гибридный\\s+формат|испытательный\\s+срок\\s+в\\s+офисе)/i.test(fullText);\n\nif (isExplicitOffice || !isExplicitRemote) {\n  return { json: { ...hhData, is_relevant: false, reject_reason: \"Не удаленка / офис / гибрид\", pitch: \"\" } };\n}\n\n// 7. Проверка зарплаты (фикс от 100 000 ₽ с учетом валют)\nif (hhData.salary) {\n  const curr = (hhData.salary.currency || 'RUR').toUpperCase();\n  const toSal = hhData.salary.to;\n  const fromSal = hhData.salary.from;\n  let multiplier = 1;\n  if (curr === 'USD' || curr === 'EUR') multiplier = 90;\n  else if (curr === 'KZT') multiplier = 0.2;\n  else if (curr === 'BYR' || curr === 'BYN') multiplier = 28;\n\n  const effectiveTo = toSal ? toSal * multiplier : null;\n  const effectiveFrom = fromSal ? fromSal * multiplier : null;\n\n  if (effectiveTo && effectiveTo < 100000 && (!effectiveFrom || effectiveFrom < 100000)) {\n    return { json: { ...hhData, is_relevant: false, reject_reason: \"Фикс ниже 100 000 ₽\", pitch: \"\" } };\n  }\n}\n\nif (/только\\s+процент|без\\s+оклада|оплата\\s+за\\s+результат\\s+без\\s+оклада/i.test(fullText)) {\n  return { json: { ...hhData, is_relevant: false, reject_reason: \"Нет оклада / только процент\", pitch: \"\" } };\n}\n\n// 8. График работы (не сменный)\nif (/график\\s+(2\\/2|3\\/3|1\\/3|сменный|по\\s+сменам|ночные)/i.test(fullText)) {\n  return { json: { ...hhData, is_relevant: false, reject_reason: \"График работы не 5/2\", pitch: \"\" } };\n}\n\n// === ВСЕ ПРОВЕРКИ ПРОЙДЕНЫ -> ВАКАНСИЯ ПОДХОДИТ! ===\nconst salStr = hhData.salary\n  ? ((hhData.salary.from ? 'от ' + hhData.salary.from : '') + (hhData.salary.to ? ' до ' + hhData.salary.to : '') + ' ' + (hhData.salary.currency || 'RUR'))\n  : 'по договоренности';\n\n// Извлечение обязанностей для емкого Pitch\nlet tasks = '';\nconst taskMatch = rawDesc.match(/(?:обязанности|задачи|предстоит|чем\\s+предстоит\\s+заниматься)[:\\s]+([^.!?\\n]{20,180})/i);\nif (taskMatch) {\n  tasks = taskMatch[1].trim();\n} else {\n  tasks = rawDesc.slice(0, 120).trim() + '...';\n}\n\nconst pitch = `🏢 Бизнес: ${emp || 'B2B'} | 💰 Доход: ${salStr} | 🎯 Задачи: ${tasks}`;\n\nreturn {\n  json: {\n    ...hhData,\n    is_relevant: true,\n    reject_reason: null,\n    pitch: pitch\n  }\n};"
+        "jsCode": "// Code - Fast Evaluator & Pitch Generator (HeadHunter)\nconst hhData = $input.item.json;\n\n// 0. Константы курсов валют\nconst CURRENCY_RATES = {\n  RUB: 1,\n  RUR: 1,\n  USD: 92,\n  EUR: 100,\n  KZT: 0.19,\n  BYN: 28,\n  BYR: 28\n};\n\n// 1. Защита от ошибок HTTP / отсутствия данных\nif (!hhData || hhData.error || !hhData.id) {\n  return {\n    json: {\n      id: (hhData && hhData.id) || 'error',\n      alternate_url: '',\n      name: 'Ошибка загрузки вакансии',\n      employer: { name: 'Неизвестно' },\n      salary: null,\n      is_relevant: false,\n      reject_reason: 'Ошибка API / Вакансия недоступна',\n      pitch: ''\n    }\n  };\n}\n\n// 2. Проверка архивности (булево или строка)\nif (hhData.archived === true || hhData.archived === 'true') {\n  return {\n    json: {\n      ...hhData,\n      is_relevant: false,\n      reject_reason: 'Вакансия в архиве',\n      pitch: ''\n    }\n  };\n}\n\nconst name = String(hhData.name || '');\nconst emp = String(hhData.employer?.name || '');\nconst rawDesc = String(hhData.description || '').replace(/<[^>]*>?/gm, ' ').replace(/\\s+/g, ' ').trim();\nconst fullText = (name + ' ' + emp + ' ' + rawDesc).toLowerCase();\n\n// === Регулярные выражения фильтров ===\nconst engRegex = /(анг[л-я]\\s+яз|анг[л-я]\\s+яп|анг[л-я]{2,4}\\s+b[12]|анг[л-я]{2,4}\\s+c[12]|анг[л-я]{2,4}\\s+int|анг[л-я]{2,4}\\s+adv|анг[л-я]*\\s+свободн|english\\s+(level|required|b1|b2|c1|c2|fluent|advanced|intermediate)|\\b(level\\s+)?(b2|c1|c2)\\b(?!\\s*b|\\w)|upper[- ]intermediate|\\badvanced\\s+english\\b|\\bfluent\\s+english\\b)/i;\nconst edtechRegex = /(онлайн[- ]?школ|edtech|skyeng|фоксфорд|tetrica|нетологи|skillbox|geekbrains|синерги|лайк\\s*центр|like\\s*центр|interneturok|maximum\\s+education|курс[а-я]*\\s+(английск|программир|дет|школьн|егэ|огэ|массаж|ai|it)|обучен[а-я]*\\s+детей\\s+(английск|программир|шахмат|ai|it|робототехник)|вебинар[а-я]*\\s+продаж|авто[- ]?вебинар|марафон[а-я]*\\s+продаж|интенсив|инфобиз|наставничеств|коучинг)/i;\nconst cryptoRegex = /(криптовалют|криптобирж|crypto|web3|блокчейн|p2p\\s+арбитраж|гемблинг|беттинг|казино)/i;\nconst badRolesRegex = /(стажер|junior|ассистент|помощник|холодн[а-я]*\\s+обзвон|оператор\\s+колл[- ]?центра|оператор\\s+на\\s+телефоне)/i;\n\n// 3. Проверка английского языка\nconst langs = Array.isArray(hhData.languages) ? hhData.languages : [];\nconst hasEng = langs.some(l => l.id === 'eng' || (l.name && l.name.toLowerCase().includes('англ')));\nif (hasEng || engRegex.test(fullText)) {\n  return { json: { ...hhData, is_relevant: false, reject_reason: \"Требуется знание английского языка\", pitch: \"\" } };\n}\n\n// 4. Проверка онлайн-школ и EdTech\nif (edtechRegex.test(fullText)) {\n  return { json: { ...hhData, is_relevant: false, reject_reason: \"Онлайн-школа / EdTech / Инфобиз\", pitch: \"\" } };\n}\n\n// 5. Проверка крипты и гемблинга\nif (cryptoRegex.test(fullText)) {\n  return { json: { ...hhData, is_relevant: false, reject_reason: \"Крипта / трейдинг / Web3 / гемблинг\", pitch: \"\" } };\n}\n\n// 6. Проверка нецелевых ролей (стажеры, ассистенты, колл-центр по названию)\nif (badRolesRegex.test(name.toLowerCase())) {\n  return { json: { ...hhData, is_relevant: false, reject_reason: \"Нецелевая роль (стажер / ассистент / колл-центр)\", pitch: \"\" } };\n}\n\n// 7. Проверка формата (строго удаленка)\nconst isExplicitRemote = (hhData.schedule && hhData.schedule.id === 'remote') ||\n  (Array.isArray(hhData.work_format) && hhData.work_format.some(wf => wf.id === 'remote' || wf.name?.toLowerCase().includes('удален'))) ||\n  /100%\\s*удален|полная\\s+удален|только\\s+удален|удаленный\\s+формат|дистанционный\\s+формат/i.test(fullText);\nconst isExplicitOffice = /(только\\s+в\\s+офис|работа\\s+в\\s+офисе|офисный\\s+формат|на\\s+территории\\s+работодателя|гибридный\\s+формат|испытательный\\s+срок\\s+в\\s+офисе)/i.test(fullText);\n\nif (isExplicitOffice || !isExplicitRemote) {\n  return { json: { ...hhData, is_relevant: false, reject_reason: \"Не удаленка / офис / гибрид\", pitch: \"\" } };\n}\n\n// 8. Проверка зарплаты (фикс от 100 000 ₽ с учетом валют)\nif (hhData.salary) {\n  const curr = (hhData.salary.currency || 'RUR').toUpperCase();\n  const rate = CURRENCY_RATES[curr] || 1;\n  const toSal = hhData.salary.to;\n  const fromSal = hhData.salary.from;\n\n  const effectiveTo = toSal ? toSal * rate : null;\n  const effectiveFrom = fromSal ? fromSal * rate : null;\n\n  if (effectiveTo && effectiveTo < 100000 && (!effectiveFrom || effectiveFrom < 100000)) {\n    return { json: { ...hhData, is_relevant: false, reject_reason: \"Фикс ниже 100 000 ₽\", pitch: \"\" } };\n  }\n}\n\nif (/только\\s+процент|без\\s+оклада|оплата\\s+за\\s+результат\\s+без\\s+оклада/i.test(fullText)) {\n  return { json: { ...hhData, is_relevant: false, reject_reason: \"Нет оклада / только процент\", pitch: \"\" } };\n}\n\n// 9. График работы (не сменный)\nif (/график\\s+(2\\/2|3\\/3|1\\/3|сменный|по\\s+сменам|ночные)/i.test(fullText)) {\n  return { json: { ...hhData, is_relevant: false, reject_reason: \"График работы не 5/2\", pitch: \"\" } };\n}\n\n// === ВСЕ ПРОВЕРКИ ПРОЙДЕНЫ -> ВАКАНСИЯ ПОДХОДИТ! ===\nconst salStr = hhData.salary\n  ? ((hhData.salary.from ? 'от ' + hhData.salary.from : '') + (hhData.salary.to ? ' до ' + hhData.salary.to : '') + ' ' + (hhData.salary.currency || 'RUR'))\n  : 'по договоренности';\n\n// Извлечение обязанностей для емкого Pitch\nlet tasks = '';\nconst taskMatch = rawDesc.match(/(?:обязанности|задачи|предстоит|чем\\s+предстоит\\s+заниматься)[:\\s]+([^.!?\\n]{20,180})/i);\nif (taskMatch) {\n  tasks = taskMatch[1].trim();\n} else {\n  tasks = rawDesc.slice(0, 120).trim() + '...';\n}\n\nconst pitch = `🏢 Бизнес: ${emp || 'B2B'} | 💰 Доход: ${salStr} | 🎯 Задачи: ${tasks}`;\n\nreturn {\n  json: {\n    ...hhData,\n    is_relevant: true,\n    reject_reason: null,\n    pitch: pitch\n  }\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
