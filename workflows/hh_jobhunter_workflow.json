@@ -585,44 +585,6 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "http://127.0.0.1:11434/api/chat",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json.ollamaBody) }}",
-        "options": {
-          "timeout": 300000
-        }
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        -2400,
-        160
-      ],
-      "id": "49db2c24-223f-4f2c-b609-feea2322a767",
-      "name": "Ollama DeepSeek",
-      "retryOnFail": true,
-      "maxTries": 2,
-      "waitBetweenTries": 2000,
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "mode": "runOnceForEachItem",
-        "jsCode": "// Code - Parse LLM\nlet hhData = {};\ntry {\n  hhData = $('Prepare Ollama Body').item.json;\n} catch (e) {\n  try {\n    hhData = $('HTTP - HH Details').item.json;\n  } catch (e2) {\n    hhData = {};\n  }\n}\n\nconst item = $input.item.json;\nlet raw = \"\";\n\nif (typeof item === \"string\") {\n  raw = item;\n} else if (item.message && typeof item.message.content === \"string\") {\n  raw = item.message.content;\n} else if (typeof item.response === \"string\") {\n  raw = item.response;\n} else if (typeof item.output === \"string\") {\n  raw = item.output;\n} else {\n  raw = JSON.stringify(item);\n}\n\n// Очистка блока think\nif (raw.includes(\"</think>\")) {\n  raw = raw.split(\"</think>\")[1];\n} else if (raw.includes(\"<think>\")) {\n  raw = raw.replace(/<think>[\\s\\S]*?(?:<\\/think>|$)/gi, \"\");\n}\n\nraw = raw.replace(/```json/gi, \"\").replace(/```/g, \"\").trim();\n\nlet parsed = {};\nconst match = raw.match(/\\{[\\s\\S]*\\}/);\nif (match) {\n  try {\n    parsed = JSON.parse(match[0]);\n  } catch (e) {\n    parsed = {};\n  }\n}\n\nlet isRelevant = false;\nif (typeof parsed.is_relevant === \"boolean\") {\n  isRelevant = parsed.is_relevant;\n} else if (parsed.is_relevant !== undefined && parsed.is_relevant !== null) {\n  isRelevant = String(parsed.is_relevant).toLowerCase() === \"true\";\n} else {\n  const relMatch = raw.match(/\"is_relevant\"\\s*:\\s*(true|false)/i);\n  if (relMatch) {\n    isRelevant = relMatch[1].toLowerCase() === \"true\";\n  }\n}\n\nlet rejectReason = parsed.reject_reason;\nif (!rejectReason && !isRelevant) {\n  if (item.error) {\n    rejectReason = \"Ошибка LLM: \" + (item.error.message || JSON.stringify(item.error)).slice(0, 80);\n  } else {\n    const reasonMatch = raw.match(/\"reject_reason\"\\s*:\\s*\"([^\"]+)\"/i);\n    rejectReason = reasonMatch ? reasonMatch[1] : \"Не соответствует критериям\";\n  }\n}\n\nlet pitch = parsed.pitch || \"\";\nif (!pitch && isRelevant) {\n  const pitchMatch = raw.match(/\"pitch\"\\s*:\\s*\"([^\"]+)\"/i);\n  pitch = pitchMatch ? pitchMatch[1] : \"\";\n}\n\npitch = pitch.replace(/^(🏢|🎯|💼)[,.]?\\s*/i, \"\").trim();\n\n// ФИНАЛЬНЫЙ GUARDRAIL: защита от галлюцинаций LLM\nif (isRelevant) {\n  const fullText = (\n    String(hhData.name || \"\") + \" \" +\n    String(hhData.employer?.name || \"\") + \" \" +\n    String(hhData.description || \"\") + \" \" +\n    pitch\n  ).toLowerCase();\n\n  const langs = Array.isArray(hhData.languages) ? hhData.languages : [];\n  const hasEngLang = langs.some(l => l.id === 'eng' || (l.name && l.name.toLowerCase().includes('англ')));\n  const engRegex = /(английск[а-я]\\s+язык|английск[а-я]\\s+реч|уров[а-я]{2,4}\\s+английск|знан[а-я]{2,4}\\s+английск|владен[а-я]{2,4}\\s+английск|разговорн[а-я]{2,4}\\s+английск|делов[а-я]*\\s+английск|english\\s+(level|required|b1|b2|c1|c2|fluent|advanced|intermediate)|\\b(level\\s+)?(b2|c1|c2)\\b(?!\\s*b|\\w)|upper[- ]intermediate|\\badvanced\\s+english\\b|\\bfluent\\s+english\\b)/i;\n  const edtechRegex = /(онлайн[- ]?школ|edtech|skyeng|фоксфорд|tetrica|тетрика|skillbox|geekbrains|нетолог|синерг|лайк|like\\s*центр|interneturok|maximum\\s+education|детск[а-я]*\\s+(центр|клуб|сад|школ|развит|обучен|программ|ai|it)|курс[а-я]*\\s+для\\s+(детей|школьник|подростк|ai|it|программ)|школ[а-я]*\\s+программирован|онлайн[- ]?курс|обучающ[а-я]*\\s+платформ|репетитор|вебинар|марафон|интенсив|инфобиз|наставничеств|коучинг)/i;\n\n  if (hasEngLang || engRegex.test(fullText)) {\n    isRelevant = false;\n    rejectReason = \"Требуется знание английского языка\";\n    pitch = \"\";\n  } else if (edtechRegex.test(fullText)) {\n    isRelevant = false;\n    rejectReason = \"Онлайн-школа / EdTech / Инфобиз\";\n    pitch = \"\";\n  }\n}\n\nreturn {\n  json: {\n    ...hhData,\n    is_relevant: isRelevant,\n    reject_reason: isRelevant ? null : (rejectReason || \"Не соответствует критериям\"),\n    pitch: isRelevant ? pitch : \"\"\n  }\n};"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -2200,
-        160
-      ],
-      "id": "c73bdc67-780a-4a20-9acb-9e364978c179",
-      "name": "Code - Parse LLM"
-    },
-    {
-      "parameters": {
         "conditions": {
           "options": {
             "caseSensitive": true,
@@ -857,19 +819,6 @@
     },
     {
       "parameters": {
-        "jsCode": "// Code - Guardrail & Prepare Ollama Body (HeadHunter)\nconst hhData = $input.item.json;\n\n// 1. Извлекаем и нормализуем текст\nconst rawDescription = String(hhData.description || \"\");\nconst cleanDescription = rawDescription.replace(/<[^>]*>?/gm, \" \").replace(/\\s+/g, \" \").trim();\n\nconst fullText = (\n  String(hhData.name || \"\") + \" \" +\n  String(hhData.employer?.name || \"\") + \" \" +\n  cleanDescription\n).toLowerCase();\n\n// 2. ЖЕСТКИЕ КРИТЕРИИ ДЛЯ МГНОВЕННОГО ОТКАЗА (БЕЗ ВЫЗОВА НЕЙРОСЕТИ)\nconst engRegex = /(английск[а-я]\\s+язык|английск[а-я]\\s+реч|уров[а-я]{2,4}\\s+английск|знан[а-я]{2,4}\\s+английск|владен[а-я]{2,4}\\s+английск|разговорн[а-я]{2,4}\\s+английск|делов[а-я]*\\s+английск|english\\s+(level|required|b1|b2|c1|c2|fluent|advanced|intermediate)|\\b(level\\s+)?(b2|c1|c2)\\b(?!\\s*b|\\w)|upper[- ]intermediate|\\badvanced\\s+english\\b|\\bfluent\\s+english\\b)/i;\nconst edtechRegex = /(онлайн[- ]?школ|edtech|skyeng|фоксфорд|tetrica|тетрика|skillbox|geekbrains|нетолог|синерг|лайк|like\\s*центр|interneturok|maximum\\s+education|детск[а-я]*\\s+(центр|клуб|сад|школ|развит|обучен|программ|ai|it)|курс[а-я]*\\s+для\\s+(детей|школьник|подростк|ai|it|программ)|школ[а-я]*\\s+программирован|онлайн[- ]?курс|обучающ[а-я]*\\s+платформ|репетитор|вебинар|марафон|интенсив|инфобиз|наставничеств|коучинг)/i;\n\nconst langs = Array.isArray(hhData.languages) ? hhData.languages : [];\nconst hasEngLang = langs.some(l => l.id === 'eng' || (l.name && l.name.toLowerCase().includes('англ')));\n\n// Проверка формата работы\nconst isExplicitRemote = (hhData.schedule && hhData.schedule.id === 'remote') ||\n  (Array.isArray(hhData.work_format) && hhData.work_format.some(wf => wf.id === 'remote' || wf.name?.toLowerCase().includes('удален'))) ||\n  /100%\\s*удален|полная\\s+удален|только\\s+удален|удаленный\\s+формат/i.test(fullText);\n\nconst isExplicitOffice = /(только\\s+в\\s+офис|работа\\s+в\\s+офисе|офисный\\s+формат|на\\s+территории\\s+работодателя|гибридный\\s+формат|испытательный\\s+срок\\s+в\\s+офисе)/i.test(fullText);\n\n// Проверка зарплаты\nlet explicitLowSalary = false;\nif (hhData.salary && (hhData.salary.currency === 'RUR' || !hhData.salary.currency)) {\n  const toSalary = hhData.salary.to;\n  const fromSalary = hhData.salary.from;\n  if (toSalary && toSalary < 100000 && (!fromSalary || fromSalary < 100000)) {\n    explicitLowSalary = true;\n  }\n}\n\nlet preRejectReason = null;\nif (hasEngLang || engRegex.test(fullText)) {\n  preRejectReason = \"Требуется знание английского языка\";\n} else if (edtechRegex.test(fullText)) {\n  preRejectReason = \"Онлайн-школа / EdTech / Инфобиз\";\n} else if (isExplicitOffice && !isExplicitRemote) {\n  preRejectReason = \"Не удаленка / офис / гибрид\";\n} else if (explicitLowSalary) {\n  preRejectReason = \"Фикс ниже 100 000 ₽\";\n}\n\n// ЕСЛИ СРАБОТАЛ ПРЕДФИЛЬТР - НЕ ВЫЗЫВАЕМ НЕЙРОСЕТЬ\nif (preRejectReason) {\n  return {\n    json: {\n      ...hhData,\n      needs_llm: false,\n      is_relevant: false,\n      reject_reason: preRejectReason,\n      pitch: \"\"\n    }\n  };\n}\n\n// 3. ПОДГОТОВКА ДЛЯ НЕЙРОСЕТИ (ТОЛЬКО ДЛЯ РЕЛЕВАНТНЫХ КАНДИДАТОВ)\nconst salaryInfo = hhData.salary \n  ? ((hhData.salary.from ? 'от ' + hhData.salary.from : '') + (hhData.salary.to ? ' до ' + hhData.salary.to : '') + ' ' + (hhData.salary.currency || 'RUR'))\n  : 'не указана';\n\nconst userContent = [\n  \"ВАКАНСИЯ (HeadHunter):\",\n  \"Должность: \" + (hhData.name || \"\"),\n  \"Компания: \" + (hhData.employer?.name || \"\"),\n  \"Зарплата: \" + salaryInfo,\n  \"Описание: \" + cleanDescription.slice(0, 1500),\n  \"\",\n  \"Оцени вакансию и верни строго JSON на русском языке.\"\n].join(\"\\n\");\n\nconst systemPrompt = `Ты — строгий карьерный эксперт и фильтр вакансий для Дмитрия Федотова (Ex-Yandex, Ex-Ozon Fintech, B2B-продажи, коммерческое руководство).\n\nКРИТЕРИИ ПРИЁМА:\n1. Формат: 100% полная удалёнка (Remote / из дома). Отказ: офис, гибрид.\n2. График: 5/2 (если не указан — считать 5/2). Отказ: сменный, 2/2.\n3. Роль: РОП / Head of Sales / BDM / KAM / Коммерческий директор / B2B-продажи. Линейный менеджер допустим, только если B2B и доход от 100к.\n4. Доход: фикс от 100 000 ₽ или совокупный от 150 000 ₽. Если фикс не указан — принимать руководящие B2B-роли.\n\nСТРОГИЙ ОТКАЗ:\n- Онлайн-школы, EdTech, курсы, репетиторы, инфобиз (причина: \"Онлайн-школа / курсы / EdTech / Инфобиз\")\n- Требование английского языка (любой уровень) (причина: \"Требуется знание английского языка\")\n- Крипта, Web3, трейдинг, гемблинг (причина: \"Крипта / трейдинг / Web3 / гемблинг\")\n- Фикс ниже 100 000 ₽ или только процент (причина: \"Фикс ниже 100 000 ₽\")\n- Офис, гибрид, график не 5/2\n\nСВОДКА ВАКАНСИИ (pitch, заполнять ТОЛЬКО если is_relevant: true, иначе \"\"):\nФормат строго из 3 пунктов в одну строку:\n🏢 Бизнес: [продукт/сфера] | 💰 Доход: [оклад/условия] | 🎯 Задачи: [2-3 главные конкретные обязанности]\n\nОтвечай ТОЛЬКО валидным JSON:\n{\n  \"is_relevant\": true/false,\n  \"reject_reason\": \"причина отказа или null\",\n  \"pitch\": \"текст сводки или пустая строка\"\n}`;\n\nconst body = {\n  model: \"qwen2.5:7b\",\n  format: \"json\",\n  keep_alive: \"1m\",\n  stream: false,\n  options: {\n    num_ctx: 4096,\n    num_predict: 300,\n    temperature: 0.1,\n    num_thread: 4\n  },\n  messages: [\n    { role: \"system\", content: systemPrompt },\n    { role: \"user\", content: userContent }\n  ]\n};\n\nreturn {\n  json: {\n    ...hhData,\n    needs_llm: true,\n    ollamaBody: body\n  }\n};"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -2800,
-        240
-      ],
-      "id": "accd1f0e-ccea-43d3-ba59-1d95791eba83",
-      "name": "Prepare Ollama Body"
-    },
-    {
-      "parameters": {
         "amount": 2
       },
       "type": "n8n-nodes-base.wait",
@@ -1092,37 +1041,17 @@
     },
     {
       "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 2
-          },
-          "conditions": [
-            {
-              "id": "needs_llm_check",
-              "leftValue": "={{ $json.needs_llm }}",
-              "rightValue": "",
-              "operator": {
-                "type": "boolean",
-                "operation": "true",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Code - Fast Evaluator & Pitch Generator (HeadHunter)\nconst hhData = $input.item.json;\n\nconst name = String(hhData.name || '');\nconst emp = String(hhData.employer?.name || '');\nconst rawDesc = String(hhData.description || '').replace(/<[^>]*>?/gm, ' ').replace(/\\s+/g, ' ').trim();\nconst fullText = (name + ' ' + emp + ' ' + rawDesc).toLowerCase();\n\n// === РЕГУЛЯРНЫЕ ВЫРАЖЕНИЯ ФИЛЬТРАЦИИ ===\nconst engRegex = /(английск[а-я]\\s+язык|английск[а-я]\\s+реч|уров[а-я]{2,4}\\s+английск|знан[а-я]{2,4}\\s+английск|владен[а-я]{2,4}\\s+английск|разговорн[а-я]{2,4}\\s+английск|делов[а-я]*\\s+английск|english\\s+(level|required|b1|b2|c1|c2|fluent|advanced|intermediate)|\\b(level\\s+)?(b2|c1|c2)\\b(?!\\s*b|\\w)|upper[- ]intermediate|\\badvanced\\s+english\\b|\\bfluent\\s+english\\b)/i;\nconst edtechRegex = /(онлайн[- ]?школ|edtech|skyeng|фоксфорд|tetrica|тетрика|skillbox|geekbrains|нетолог|синерг|лайк|like\\s*центр|interneturok|maximum\\s+education|детск[а-я]*\\s+(центр|клуб|сад|школ|развит|обучен|программ|ai|it)|курс[а-я]*\\s+для\\s+(детей|школьник|подростк|ai|it|программ)|школ[а-я]*\\s+программирован|онлайн[- ]?курс|обучающ[а-я]*\\s+платформ|репетитор|вебинар|марафон|интенсив|инфобиз|наставничеств|коучинг)/i;\nconst cryptoRegex = /(криптовалют|криптобирж|crypto|web3|блокчейн|p2p\\s+арбитраж|гемблинг|беттинг|казино)/i;\nconst badRolesRegex = /(стажер|junior|ассистент|помощник|холодн[а-я]*\\s+обзвон|оператор\\s+колл[- ]?центра|оператор\\s+на\\s+телефон)/i;\n\n// 1. Проверка английского языка\nconst langs = Array.isArray(hhData.languages) ? hhData.languages : [];\nconst hasEng = langs.some(l => l.id === 'eng' || (l.name && l.name.toLowerCase().includes('англ')));\nif (hasEng || engRegex.test(fullText)) {\n  return { json: { ...hhData, is_relevant: false, reject_reason: \"Требуется знание английского языка\", pitch: \"\" } };\n}\n\n// 2. Проверка онлайн-школ и EdTech\nif (edtechRegex.test(fullText)) {\n  return { json: { ...hhData, is_relevant: false, reject_reason: \"Онлайн-школа / EdTech / Инфобиз\", pitch: \"\" } };\n}\n\n// 3. Проверка крипты и гемблинга\nif (cryptoRegex.test(fullText)) {\n  return { json: { ...hhData, is_relevant: false, reject_reason: \"Крипта / трейдинг / Web3 / гемблинг\", pitch: \"\" } };\n}\n\n// 4. Проверка нецелевых ролей (стажеры, ассистенты, колл-центр)\nif (badRolesRegex.test(name.toLowerCase())) {\n  return { json: { ...hhData, is_relevant: false, reject_reason: \"Нецелевая роль (стажер / ассистент / колл-центр)\", pitch: \"\" } };\n}\n\n// 5. Проверка формата (строго удаленка)\nconst isExplicitRemote = (hhData.schedule && hhData.schedule.id === 'remote') ||\n  (Array.isArray(hhData.work_format) && hhData.work_format.some(wf => wf.id === 'remote' || wf.name?.toLowerCase().includes('удален'))) ||\n  /100%\\s*удален|полная\\s+удален|только\\s+удален|удаленный\\s+формат/i.test(fullText);\nconst isExplicitOffice = /(только\\s+в\\s+офис|работа\\s+в\\s+офисе|офисный\\s+формат|на\\s+территории\\s+работодателя|гибридный\\s+формат|испытательный\\s+срок\\s+в\\s+офисе)/i.test(fullText);\nif (isExplicitOffice && !isExplicitRemote) {\n  return { json: { ...hhData, is_relevant: false, reject_reason: \"Не удаленка / офис / гибрид\", pitch: \"\" } };\n}\n\n// 6. Проверка зарплаты (фикс от 100 000 ₽)\nif (hhData.salary && (hhData.salary.currency === 'RUR' || !hhData.salary.currency)) {\n  const toSal = hhData.salary.to;\n  const fromSal = hhData.salary.from;\n  if (toSal && toSal < 100000 && (!fromSal || fromSal < 100000)) {\n    return { json: { ...hhData, is_relevant: false, reject_reason: \"Фикс ниже 100 000 ₽\", pitch: \"\" } };\n  }\n}\nif (/только\\s+процент|без\\s+оклада|оплата\\s+за\\s+результат\\s+без\\s+оклада/i.test(fullText)) {\n  return { json: { ...hhData, is_relevant: false, reject_reason: \"Нет оклада / только процент\", pitch: \"\" } };\n}\n\n// 7. График работы\nif (/график\\s+(2\\/2|3\\/3|1\\/3|сменный|по\\s+сменам|ночные)/i.test(fullText)) {\n  return { json: { ...hhData, is_relevant: false, reject_reason: \"График работы не 5/2\", pitch: \"\" } };\n}\n\n// === ВСЕ ПРОВЕРКИ ПРОЙДЕНЫ -> ВАКАНСИЯ ПОДХОДИТ! ===\nconst salStr = hhData.salary\n  ? ((hhData.salary.from ? 'от ' + hhData.salary.from : '') + (hhData.salary.to ? ' до ' + hhData.salary.to : '') + ' ' + (hhData.salary.currency || 'RUR'))\n  : 'по договоренности';\n\n// Извлечение обязанностей для емкого Pitch\nlet tasks = '';\nconst taskMatch = rawDesc.match(/(?:обязанности|задачи|предстоит|чем\\s+предстоит\\s+заниматься)[:\\s]+([^.!?\\n]{20,180})/i);\nif (taskMatch) {\n  tasks = taskMatch[1].trim();\n} else {\n  tasks = rawDesc.slice(0, 120).trim() + '...';\n}\n\nconst pitch = `🏢 Бизнес: ${emp || 'B2B'} | 💰 Доход: ${salStr} | 🎯 Задачи: ${tasks}`;\n\nreturn {\n  json: {\n    ...hhData,\n    is_relevant: true,\n    reject_reason: null,\n    pitch: pitch\n  }\n};"
       },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
-        -2600,
+        -2400,
         240
       ],
-      "id": "if-needs-llm-node",
-      "name": "IF Needs LLM"
+      "id": "code-fast-evaluator-node",
+      "name": "Code - Fast Evaluator"
     }
   ],
   "connections": {
@@ -1270,28 +1199,6 @@
         ]
       ]
     },
-    "Ollama DeepSeek": {
-      "main": [
-        [
-          {
-            "node": "Code - Parse LLM",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Code - Parse LLM": {
-      "main": [
-        [
-          {
-            "node": "IF Relevant",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "IF Relevant": {
       "main": [
         [
@@ -1332,22 +1239,11 @@
         ]
       ]
     },
-    "Prepare Ollama Body": {
-      "main": [
-        [
-          {
-            "node": "IF Needs LLM",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Wait 1 sec": {
       "main": [
         [
           {
-            "node": "Prepare Ollama Body",
+            "node": "Code - Fast Evaluator",
             "type": "main",
             "index": 0
           }
@@ -1475,18 +1371,11 @@
         ]
       ]
     },
-    "IF Needs LLM": {
+    "Code - Fast Evaluator": {
       "main": [
         [
           {
-            "node": "Ollama DeepSeek",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Google Sheets - Rejected",
+            "node": "IF Relevant",
             "type": "main",
             "index": 0
           }

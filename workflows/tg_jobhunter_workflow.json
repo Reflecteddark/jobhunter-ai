@@ -537,52 +537,6 @@
     },
     {
       "parameters": {
-        "jsCode": "// Code - Prepare Ollama Body (Telegram)\nconst item = $input.item.json;\n\nconst userContent = [\n  \"ВАКАНСИЯ (из Telegram):\",\n  \"Канал: \" + (item.tg_channel || \"Telegram\"),\n  \"Заголовок: \" + (item.tg_title || \"\"),\n  \"Ссылка: \" + (item.tg_url || \"\"),\n  \"Текст поста: \" + (item.tg_text || \"\").slice(0, 1500),\n  \"\",\n  \"Оцени вакансию и верни строго JSON на русском языке.\"\n].join(\"\\n\");\n\nconst systemPrompt = `Ты — строгий карьерный эксперт и фильтр вакансий для Дмитрия Федотова (Ex-Yandex, Ex-Ozon Fintech, B2B-продажи, коммерческое руководство).\n\nКРИТЕРИИ ПРИЁМА (все должны выполняться):\n1. ФОРМАТ РАБОТЫ (СТРОЖАЙШЕ): ТОЛЬКО 100% ПОЛНАЯ УДАЛЁНКА (Remote / из дома).\n- Подходит: полная удалённая работа (удаленка / remote / из дома).\n- СТРОГИЙ ОТКАЗ: любой гибрид (даже 1 день в неделю в офисе), работа в офисе, встречи в офисе, разъездной формат (причина: \"Не удаленка / гибрид / офис\").\n2. ГРАФИК РАБОТЫ:\n- Только 5/2 (пятидневка).\n- Если график в тексте НЕ указан — ПРОПУСКАЙ (считай, что подходит 5/2).\n- СТРОГИЙ ОТКАЗ: сменный график, 2/2, 3/3, 1/3, по сменам, ночные смены (причина: \"График не 5/2\").\n3. РОЛЬ (B2B И РУКОВОДСТВО):\n- РОП / Head of Sales / Руководитель отдела продаж\n- Коммерческий директор / Commercial Director / CCO\n- BDM / Директор по развитию бизнеса / Business Development\n- Менеджер по работе с ключевыми клиентами / KAM / Key Account Manager\n- Менеджер по продажам B2B (IT, SaaS, FinTech, логистика, B2B-услуги, оборудование)\n4. ЗАРПЛАТА И ФИКС (СТРОГО):\n- Фикс / оклад — СТРОГО от 100 000 ₽.\n- Совокупный доход (фикс + KPI/бонусы/проценты) — от 150 000 ₽.\n- Если оклад/фикс явно указан ниже 100 000 ₽ (например, 30к, 40к, 50к, 60к, 80к) — СТРОГИЙ ОТКАЗ (причина: \"Фикс ниже 100 000 ₽\").\n- Если оклад/фикс в тексте НЕ указан — ПРИНИМАЙ ТОЛЬКО если роль руководящая (РОП, Head of Sales, BDM, Коммерческий директор) в B2B.\n- СТРОГИЙ ОТКАЗ: работа только за процент / без оклада / только комиссия (причина: \"Нет оклада / только процент\").\n\nСТРОЖАЙШИЙ КАТЕГОРИЧЕСКИЙ ОТКАЗ (любой пункт = reject_reason):\n- ЛЮБЫЕ ОНЛАЙН-ШКОЛЫ, КУРСЫ, EDTECH (как B2C, так и B2B), детские центры, продажа вебинаров/марафонов/интенсивов, образовательные платформы, репетиторство, обучение детей/взрослых, школы дизайна/программирования/языков/ЕГЭ/ОГЭ/музыки, инфобизнес, наставничество, коучинг (причина: \"Онлайн-школа / курсы / EdTech / Инфобиз\")\n- ЛЮБЫЕ ТРЕБОВАНИЯ ЗНАНИЯ АНГЛИЙСКОГО ЯЗЫКА (любой уровень: Intermediate, Upper-Intermediate, B1, B2, C1, C2, Advanced, Fluent, свободный, разговорный, деловой английский, ведение переговоров на английском). Кандидат рассматривает вакансии ТОЛЬКО на русском языке! (причина: \"Требуется знание английского языка\")\n- Крипта, криптовалюты, crypto, Web3, блокчейн, криптобиржи, трейдинг, p2p, арбитраж, гемблинг (причина: \"Крипта / трейдинг / Web3 / гемблинг\")\n- Фикс ниже 100 000 ₽ или только процент без оклада (причина: \"Фикс ниже 100 000 ₽\" или \"Нет фикса / только процент\")\n- График не 5/2 (2/2, сменный, по сменам) (причина: \"График не 5/2\")\n- Оплата только процент / без фиксированного оклада\n- Холодный обзвон на телефоне как единственная обязанность\n- Стажёр / junior / ассистент\n- Вакансия не связана с B2B-продажами или развитием бизнеса\n- 100% строгий офис без удалёнки\n\nНАЗВАНИЕ ДОЛЖНОСТИ (role_title):\nУкажи точное конкретное название роли из текста (например: \"Руководитель отдела продаж\", \"Senior BDM\", \"Key Account Manager B2B\"), а НЕ абстрактное \"Менеджер\".\n\nСВОДКА ВАКАНСИИ (поле \"pitch\", заполнять ТОЛЬКО если is_relevant: true):\nНи в коем случае НЕ пиши сопроводительное письмо или почему кандидат подходит (НЕ упоминай опыт кандидата, Яндекс, Ozon и т.д.).\nКандидату нужен короткий структурированный обзор САМОЙ вакансии для быстрого сканирования таблицы глазами.\nФормат строго из 3 пунктов в одну строку через разделители:\n🏢 Бизнес: [сфера компании и продукт] | 💰 Доход: [оклад/фикс, KPI, совокупный доход или условия] | 🎯 Задачи: [2-3 главные конкретные обязанности]\n\n- В блоке think думай предельно кратко (до 40-60 слов).\nОтвечай ТОЛЬКО валидным JSON:\n{\n  \"is_relevant\": true/false,\n  \"reject_reason\": \"одна конкретная причина отказа или null\",\n  \"pitch\": \"текст сводки о вакансии или пустая строка\",\n  \"company_name\": \"название компании\",\n  \"role_title\": \"название должности\",\n  \"salary_text\": \"зарплата или Не указана\"\n}`;\n\nconst body = {\n  model: \"qwen2.5:7b\",\n  format: \"json\",\n  keep_alive: \"1m\",\n  stream: false,\n  options: {\n    num_ctx: 4096,\n    num_predict: 300,\n    temperature: 0.1,\n    num_thread: 4\n  },\n  messages: [\n    { role: \"system\", content: systemPrompt },\n    { role: \"user\", content: userContent }\n  ]\n};\n\nreturn {\n  json: {\n    ollamaBody: body,\n    ...item\n  }\n};"
-      },
-      "id": "b692a894-93af-4ed6-8f55-de3a55cda414",
-      "name": "Prepare Ollama Body",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        672,
-        608
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "http://127.0.0.1:11434/api/chat",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json.ollamaBody) }}",
-        "options": {
-          "timeout": 300000
-        }
-      },
-      "id": "24fcd137-8738-41b6-992c-98f5c55b7065",
-      "name": "HTTP Request - Ollama DeepSeek",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        880,
-        608
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "const rawItem = $input.item.json;\nlet raw = \"\";\n\nif (typeof rawItem === \"string\") {\n  raw = rawItem;\n} else if (rawItem.message && typeof rawItem.message.content === \"string\") {\n  raw = rawItem.message.content;\n} else if (typeof rawItem.response === \"string\") {\n  raw = rawItem.response;\n} else if (typeof rawItem.output === \"string\") {\n  raw = rawItem.output;\n} else {\n  raw = JSON.stringify(rawItem);\n}\n\nif (raw.includes(\"</think>\")) {\n  raw = raw.split(\"</think>\")[1];\n} else if (raw.includes(\"<think>\")) {\n  raw = raw.replace(/<think>[\\s\\S]*?(?:<\\/think>|$)/gi, \"\");\n}\n\nraw = raw.replace(/```json/gi, \"\").replace(/```/g, \"\").trim();\n\nlet parsed = {};\nconst match = raw.match(/\\{[\\s\\S]*\\}/);\nif (match) {\n  try {\n    parsed = JSON.parse(match[0]);\n  } catch (e) {\n    parsed = {};\n  }\n}\n\nlet isRelevant = false;\nif (typeof parsed.is_relevant === \"boolean\") {\n  isRelevant = parsed.is_relevant;\n} else if (parsed.is_relevant !== undefined && parsed.is_relevant !== null) {\n  isRelevant = String(parsed.is_relevant).toLowerCase() === \"true\";\n} else {\n  const relMatch = raw.match(/\"is_relevant\"\\s*:\\s*(true|false)/i);\n  if (relMatch) {\n    isRelevant = relMatch[1].toLowerCase() === \"true\";\n  }\n}\n\nlet rejectReason = parsed.reject_reason;\nif (!rejectReason && !isRelevant) {\n  const reasonMatch = raw.match(/\"reject_reason\"\\s*:\\s*\"([^\"]+)\"/i);\n  rejectReason = reasonMatch ? reasonMatch[1] : \"Не соответствует критериям\";\n}\n\nlet pitch = parsed.pitch || \"\";\nif (!pitch && isRelevant) {\n  const pitchMatch = raw.match(/\"pitch\"\\s*:\\s*\"([^\"]+)\"/i);\n  pitch = pitchMatch ? pitchMatch[1] : \"\";\n}\n\npitch = pitch.replace(/^(Здравствуйте|Добрый день)[,.]?\\s*/i, \"\").trim();\n\nconst company = parsed.company_name || rawItem.tg_channel || rawItem.channel || \"Telegram\";\nconst role = parsed.role_title || rawItem.tg_title || rawItem.name || \"Менеджер по продажам\";\nconst salary = parsed.salary_text || rawItem.salary || \"По договоренности\";\nconst postText = rawItem.tg_text || rawItem.text || \"\";\n\n// === GUARDRAIL ДЛЯ ТЕЛЕГРАМ-ПОСТОВ ===\nif (isRelevant) {\n  const fullText = (\n    String(role) + \" \" +\n    String(company) + \" \" +\n    String(postText) + \" \" +\n    pitch\n  ).toLowerCase();\n\n  const engRegex = /(знани[ея]\\s+английского|уровен[ья]\\s+английского|английск[ийого]{2,4}\\s+язык|разговорн[ыйого]{2,4}\\s+английск|свободн[ыйого]{2,4}\\s+английск|делов[ойого]{2,4}\\s+английск|переговор[ыа-я]*\\s+на\\s+английск|english\\s+(level|required|b1|b2|c1|c2|fluent|advanced|intermediate)|\\b(level\\s+)?(b2|c1|c2)\\b(?!\\s*b|\\w)|upper[- ]intermediate|\\badvanced\\s+english\\b|\\bfluent\\s+english\\b)/i;\n\n  const edtechRegex = /(онлайн[- ]?школ|edtech|skyeng|тетрик|tetrica|skillbox|geekbrains|нетолог|фоксфорд|умскул|интернетурок|interneturok|maximum\\s+education|школ[а-я]*\\s+(дизайна|программирования|вокала|музыки|егэ|огэ|ии|ai|английского)|курс[ыа-я]*\\s+по\\s+(программированию|дизайну|маркетингу|ai|ии|английскому)|продаж[а-я]*\\s+курс|вводн[ыйого]{2,4}\\s+урок|подготовк[а-я]*\\s+к\\s+(егэ|огэ)|репетитор|инфобиз|наставничеств|коучинг)/i;\n\n  if (engRegex.test(fullText)) {\n    isRelevant = false;\n    rejectReason = \"Требуется знание английского языка\";\n    pitch = \"\";\n  } else if (edtechRegex.test(fullText)) {\n    isRelevant = false;\n    rejectReason = \"Онлайн-школа / EdTech / Инфобиз\";\n    pitch = \"\";\n  }\n}\n\nreturn {\n  json: {\n    vacancy_id: rawItem.tg_guid || rawItem.tg_url || rawItem.id || String(Date.now()),\n    created_at: rawItem.tg_date || new Date().toISOString(),\n    company: company,\n    role: role,\n    salary: salary,\n    url: rawItem.tg_url || rawItem.alternate_url || \"\",\n    status: isRelevant ? \"READY\" : \"REJECTED\",\n    pitch_or_reason: isRelevant ? pitch : (rejectReason || \"Не подходит\"),\n    my_status: isRelevant ? \"⚪ Новая\" : \"\",\n    is_relevant: isRelevant\n  }\n};"
-      },
-      "id": "1bd08aab-b18e-4d00-8b7f-3a713a650fc4",
-      "name": "Code - Parse LLM",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1104,
-        608
-      ]
-    },
-    {
-      "parameters": {
         "conditions": {
           "options": {
             "caseSensitive": true,
@@ -714,6 +668,20 @@
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Code - Fast Evaluator & Pitch Generator (Telegram)\nconst item = $input.item.json;\n\nconst channel = String(item.tg_channel || 'Telegram');\nconst title = String(item.tg_title || '');\nconst text = String(item.tg_text || '').replace(/<[^>]*>?/gm, ' ').replace(/\\s+/g, ' ').trim();\nconst fullText = (channel + ' ' + title + ' ' + text).toLowerCase();\n\nconst engRegex = /(английск[а-я]\\s+язык|английск[а-я]\\s+реч|уров[а-я]{2,4}\\s+английск|знан[а-я]{2,4}\\s+английск|владен[а-я]{2,4}\\s+английск|разговорн[а-я]{2,4}\\s+английск|делов[а-я]*\\s+английск|english\\s+(level|required|b1|b2|c1|c2|fluent|advanced|intermediate)|\\b(level\\s+)?(b2|c1|c2)\\b(?!\\s*b|\\w)|upper[- ]intermediate|\\badvanced\\s+english\\b|\\bfluent\\s+english\\b)/i;\nconst edtechRegex = /(онлайн[- ]?школ|edtech|skyeng|фоксфорд|tetrica|тетрика|skillbox|geekbrains|нетолог|синерг|лайк|like\\s*центр|interneturok|maximum\\s+education|детск[а-я]*\\s+(центр|клуб|сад|школ|развит|обучен|программ|ai|it)|курс[а-я]*\\s+для\\s+(детей|школьник|подростк|ai|it|программ)|школ[а-я]*\\s+программирован|онлайн[- ]?курс|обучающ[а-я]*\\s+платформ|репетитор|вебинар|марафон|интенсив|инфобиз|наставничеств|коучинг)/i;\nconst cryptoRegex = /(криптовалют|криптобирж|crypto|web3|блокчейн|p2p\\s+арбитраж|гемблинг|беттинг|казино)/i;\nconst badRolesRegex = /(стажер|junior|ассистент|помощник|холодн[а-я]*\\s+обзвон|оператор\\s+колл[- ]?центра|оператор\\s+на\\s+телефон)/i;\n\nif (engRegex.test(fullText)) {\n  return { json: { ...item, is_relevant: false, reject_reason: \"Требуется знание английского языка\", pitch: \"\" } };\n}\nif (edtechRegex.test(fullText)) {\n  return { json: { ...item, is_relevant: false, reject_reason: \"Онлайн-школа / EdTech / Инфобиз\", pitch: \"\" } };\n}\nif (cryptoRegex.test(fullText)) {\n  return { json: { ...item, is_relevant: false, reject_reason: \"Крипта / трейдинг / Web3 / гемблинг\", pitch: \"\" } };\n}\nif (badRolesRegex.test(title.toLowerCase())) {\n  return { json: { ...item, is_relevant: false, reject_reason: \"Нецелевая роль (стажер / ассистент / колл-центр)\", pitch: \"\" } };\n}\nconst isExplicitOffice = /(только\\s+в\\s+офис|работа\\s+в\\s+офисе|офисный\\s+формат|на\\s+территории\\s+работодателя|гибридный\\s+формат|испытательный\\s+срок\\s+в\\s+офисе)/i.test(fullText);\nconst isExplicitRemote = /удален|remote|из\\s+дома|home\\s*office/i.test(fullText);\nif (isExplicitOffice && !isExplicitRemote) {\n  return { json: { ...item, is_relevant: false, reject_reason: \"Не удаленка / офис / гибрид\", pitch: \"\" } };\n}\n\n// Извлечение зарплаты\nconst salMatch = text.match(/(?:от|до|з\\/?п|оклад|доход)[:\\s]+([0-9\\s]{4,10}(?:руб|₽|rur|usd|\\$|k|к)?)/i);\nconst salaryText = salMatch ? salMatch[0].trim() : 'по договоренности';\n\nlet tasks = text.slice(0, 130).trim() + '...';\nconst pitch = `🏢 Канал: ${channel} | 💰 Доход: ${salaryText} | 🎯 Вакансия: ${title || tasks}`;\n\nreturn {\n  json: {\n    ...item,\n    is_relevant: true,\n    reject_reason: null,\n    pitch: pitch,\n    company_name: channel,\n    role_title: title || \"Руководитель B2B / Продажи\",\n    salary_text: salaryText\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -300,
+        240
+      ],
+      "id": "code-fast-eval-tg",
+      "name": "Code - Fast Evaluator"
     }
   ],
   "connections": {
@@ -964,40 +932,7 @@
         [],
         [
           {
-            "node": "Prepare Ollama Body",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Prepare Ollama Body": {
-      "main": [
-        [
-          {
-            "node": "HTTP Request - Ollama DeepSeek",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "HTTP Request - Ollama DeepSeek": {
-      "main": [
-        [
-          {
-            "node": "Code - Parse LLM",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Code - Parse LLM": {
-      "main": [
-        [
-          {
-            "node": "If - Is Relevant",
+            "node": "Code - Fast Evaluator",
             "type": "main",
             "index": 0
           }
@@ -1027,6 +962,17 @@
         [
           {
             "node": "Loop Over Items (по 1 шт)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Fast Evaluator": {
+      "main": [
+        [
+          {
+            "node": "If - Is Relevant",
             "type": "main",
             "index": 0
           }
