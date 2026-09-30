@@ -76,7 +76,8 @@
       "name": "HH - РОП / Head of Sales",
       "executeOnce": true,
       "retryOnFail": true,
-      "waitBetweenTries": 5000
+      "waitBetweenTries": 5000,
+      "maxTries": 3
     },
     {
       "parameters": {
@@ -133,7 +134,8 @@
       "name": "HH - BDM / Развитие бизнеса",
       "executeOnce": true,
       "retryOnFail": true,
-      "waitBetweenTries": 5000
+      "waitBetweenTries": 5000,
+      "maxTries": 3
     },
     {
       "parameters": {
@@ -190,7 +192,8 @@
       "name": "HH - Key Account Enterprise",
       "executeOnce": true,
       "retryOnFail": true,
-      "waitBetweenTries": 5000
+      "waitBetweenTries": 5000,
+      "maxTries": 3
     },
     {
       "parameters": {
@@ -247,7 +250,8 @@
       "name": "HH - FinTech & Banking B2B",
       "executeOnce": true,
       "retryOnFail": true,
-      "waitBetweenTries": 5000
+      "waitBetweenTries": 5000,
+      "maxTries": 3
     },
     {
       "parameters": {
@@ -304,7 +308,8 @@
       "name": "HH - IT & SaaS Enterprise",
       "executeOnce": true,
       "retryOnFail": true,
-      "waitBetweenTries": 5000
+      "waitBetweenTries": 5000,
+      "maxTries": 3
     },
     {
       "parameters": {
@@ -361,7 +366,8 @@
       "name": "HH - Продажи Fintech & SaaS",
       "executeOnce": true,
       "retryOnFail": true,
-      "waitBetweenTries": 5000
+      "waitBetweenTries": 5000,
+      "maxTries": 3
     },
     {
       "parameters": {
@@ -418,7 +424,8 @@
       "name": "HH - Партнёрские продажи",
       "executeOnce": true,
       "retryOnFail": true,
-      "waitBetweenTries": 5000
+      "waitBetweenTries": 5000,
+      "maxTries": 3
     },
     {
       "parameters": {
@@ -475,7 +482,8 @@
       "name": "HH - Ключевые клиенты B2B",
       "executeOnce": true,
       "retryOnFail": true,
-      "waitBetweenTries": 5000
+      "waitBetweenTries": 5000,
+      "maxTries": 3
     },
     {
       "parameters": {
@@ -512,7 +520,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// 1. Получаем существующие ID из обеих вкладок таблицы (JobHunt_РОП и JobHunt_Rejected)\nlet existingIds = new Set();\ntry {\n  // ID из вкладки JobHunt_Rejected (пришли на вход как $input.all())\n  const rejectedItems = $input.all();\n  for (const item of rejectedItems) {\n    const id = String(item.json.vacancy_id || '').trim();\n    if (id) existingIds.add(id);\n  }\n\n  // ID из вкладки JobHunt_РОП (берем из узла 'Code - Aggregate Ready IDs')\n  const readyIds = $('Code - Aggregate Ready IDs').first().json.readyIds || [];\n  for (const id of readyIds) {\n    const idStr = String(id || '').trim();\n    if (idStr) existingIds.add(idStr);\n  }\n\n  console.log('Уникальных ID из обеих вкладок таблицы:', existingIds.size);\n} catch (e) {\n  console.log('Ошибка чтения таблиц:', e.message);\n  existingIds = new Set();\n}\n\n// 2. Имена всех 9 нод поиска\nconst searchNodeNames = [\n  'HH - РОП / Head of Sales',\n  'HH - BDM / Развитие бизнеса',\n  'HH - Key Account Enterprise',\n  'HH - FinTech & Banking B2B',\n  'HH - IT & SaaS Enterprise',\n  'HH - Продажи Fintech & SaaS',\n  'HH - Партнёрские продажи',\n  'HH - Ключевые клиенты B2B',\n  'HH - Менеджер по продажам'\n];\n\nlet allRawVacancies = [];\nfor (const name of searchNodeNames) {\n  try {\n    const nodeResults = $(name).all();\n    for (const res of nodeResults) {\n      if (res.json && Array.isArray(res.json.items)) {\n        allRawVacancies.push(...res.json.items);\n      } else if (res.json && res.json.id) {\n        allRawVacancies.push(res.json);\n      }\n    }\n  } catch (err) {\n    console.log(`Нода ${name} еще не выполнена`);\n  }\n}\n\nconsole.log(`Всего собрано вакансий с 9 поисков: ${allRawVacancies.length}`);\n\n// 3. Отбираем только УНИКАЛЬНЫЕ вакансии\nconst uniqueItems = [];\nconst seenInCurrentRun = new Set();\n\nfor (const vacancy of allRawVacancies) {\n  const id = String(vacancy.id || '');\n  if (id && !existingIds.has(id) && !seenInCurrentRun.has(id)) {\n    seenInCurrentRun.add(id);\n    uniqueItems.push({ json: { id: id } });\n  }\n}\n\nconsole.log(`Новых уникальных вакансий: ${uniqueItems.length}`);\nreturn uniqueItems;"
+        "jsCode": "// 1. Получаем существующие ID из таблицы\nlet existingIds = new Set();\ntry {\n  const sheetItems = $input.all();\n  existingIds = new Set(\n    sheetItems\n      .map(item => String(item.json.vacancy_id || ''))\n      .filter(id => id.length > 0)\n  );\n  console.log('Уникальных ID в таблице:', existingIds.size);\n} catch (e) {\n  console.log('Ошибка чтения таблицы:', e.message);\n  existingIds = new Set();\n}\n\n// 2. Имена всех 8 нод поиска\nconst searchNodeNames = [\n  'HH - РОП / Head of Sales',\n  'HH - BDM / Развитие бизнеса',\n  'HH - Key Account Enterprise',\n  'HH - FinTech & Banking B2B',\n  'HH - IT & SaaS Enterprise',\n  'HH - Продажи Fintech & SaaS',\n  'HH - Партнёрские продажи',\n  'HH - Ключевые клиенты B2B'\n];\n\nlet allRawVacancies = [];\nfor (const name of searchNodeNames) {\n  try {\n    const nodeResults = $(name).all();\n    for (const res of nodeResults) {\n      if (res.json && Array.isArray(res.json.items)) {\n        allRawVacancies.push(...res.json.items);\n      } else if (res.json && res.json.id) {\n        allRawVacancies.push(res.json);\n      }\n    }\n  } catch (err) {\n    console.log(`Нода ${name} еще не выполнена`);\n  }\n}\n\nconsole.log(`Всего собрано вакансий с 8 поисков: ${allRawVacancies.length}`);\n\n// 3. Отбираем только УНИКАЛЬНЫЕ вакансии\nconst uniqueItems = [];\nconst seenInCurrentRun = new Set();\n\nfor (const vacancy of allRawVacancies) {\n  const id = String(vacancy.id || '');\n  if (id && !existingIds.has(id) && !seenInCurrentRun.has(id)) {\n    seenInCurrentRun.add(id);\n    uniqueItems.push({ json: { id: id } });\n  }\n}\n\nconsole.log(`Новых уникальных вакансий: ${uniqueItems.length}`);\nreturn uniqueItems;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -602,7 +610,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "let hhData = {};\ntry {\n  hhData = $('HTTP - HH Details').item.json;\n} catch (e) {\n  hhData = {};\n}\n\nconst item = $input.item.json;\nlet raw = \"\";\n\nif (typeof item === \"string\") {\n  raw = item;\n} else if (item.message && typeof item.message.content === \"string\") {\n  raw = item.message.content;\n} else if (typeof item.response === \"string\") {\n  raw = item.response;\n} else if (typeof item.output === \"string\") {\n  raw = item.output;\n} else {\n  raw = JSON.stringify(item);\n}\n\n// Надёжное удаление блока think (включая незакрытый <think>)\nif (raw.includes(\"</think>\")) {\n  raw = raw.split(\"</think>\")[1];\n} else if (raw.includes(\"<think>\")) {\n  raw = raw.replace(/<think>[\\s\\S]*?(?:<\\/think>|$)/gi, \"\");\n}\n\nraw = raw.replace(/```json/gi, \"\").replace(/```/g, \"\").trim();\n\n// Поиск JSON\nlet parsed = {};\nconst match = raw.match(/\\{[\\s\\S]*\\}/);\nif (match) {\n  try {\n    parsed = JSON.parse(match[0]);\n  } catch (e) {\n    parsed = {};\n  }\n}\n\n// Надёжное извлечение is_relevant с фоллбэком по тексту\nlet isRelevant = false;\nif (typeof parsed.is_relevant === \"boolean\") {\n  isRelevant = parsed.is_relevant;\n} else if (parsed.is_relevant !== undefined && parsed.is_relevant !== null) {\n  isRelevant = String(parsed.is_relevant).toLowerCase() === \"true\";\n} else {\n  // Фоллбэк: прямой regex по тексту ответа\n  const relMatch = raw.match(/\"is_relevant\"\\s*:\\s*(true|false)/i);\n  if (relMatch) {\n    isRelevant = relMatch[1].toLowerCase() === \"true\";\n  }\n}\n\n// Извлечение причины отказа\nlet rejectReason = parsed.reject_reason;\nif (!rejectReason && !isRelevant) {\n  const reasonMatch = raw.match(/\"reject_reason\"\\s*:\\s*\"([^\"]+)\"/i);\n  rejectReason = reasonMatch ? reasonMatch[1] : \"Не соответствует критериям\";\n}\n\n// Извлечение питча\nlet pitch = parsed.pitch || \"\";\nif (!pitch && isRelevant) {\n  const pitchMatch = raw.match(/\"pitch\"\\s*:\\s*\"([^\"]+)\"/i);\n  pitch = pitchMatch ? pitchMatch[1] : \"\";\n}\n\n// Очистка питча от шаблонного мусора если нейросеть всё же написала \"Здравствуйте\"\npitch = pitch.replace(/^(Здравствуйте|Добрый день)[,.]?\\s*/i, \"\").trim();\n\nreturn {\n  json: {\n    ...hhData,\n    is_relevant: isRelevant,\n    reject_reason: isRelevant ? null : (rejectReason || \"Не соответствует критериям\"),\n    pitch: isRelevant ? pitch : \"\"\n  }\n};\n"
+        "jsCode": "let hhData = {};\ntry {\n  hhData = $('HTTP - HH Details').item.json;\n} catch (e) {\n  hhData = {};\n}\n\nconst item = $input.item.json;\nlet raw = \"\";\n\nif (typeof item === \"string\") {\n  raw = item;\n} else if (item.message && typeof item.message.content === \"string\") {\n  raw = item.message.content;\n} else if (typeof item.response === \"string\") {\n  raw = item.response;\n} else if (typeof item.output === \"string\") {\n  raw = item.output;\n} else {\n  raw = JSON.stringify(item);\n}\n\n// Надёжное удаление блока think (включая незакрытый <think>)\nif (raw.includes(\"</think>\")) {\n  raw = raw.split(\"</think>\")[1];\n} else if (raw.includes(\"<think>\")) {\n  raw = raw.replace(/<think>[\\s\\S]*?(?:<\\/think>|$)/gi, \"\");\n}\n\nraw = raw.replace(/```json/gi, \"\").replace(/```/g, \"\").trim();\n\n// Поиск JSON\nlet parsed = {};\nconst match = raw.match(/\\{[\\s\\S]*\\}/);\nif (match) {\n  try {\n    parsed = JSON.parse(match[0]);\n  } catch (e) {\n    parsed = {};\n  }\n}\n\n// Надёжное извлечение is_relevant с фоллбэком по тексту\nlet isRelevant = false;\nif (typeof parsed.is_relevant === \"boolean\") {\n  isRelevant = parsed.is_relevant;\n} else if (parsed.is_relevant !== undefined && parsed.is_relevant !== null) {\n  isRelevant = String(parsed.is_relevant).toLowerCase() === \"true\";\n} else {\n  const relMatch = raw.match(/\"is_relevant\"\\s*:\\s*(true|false)/i);\n  if (relMatch) {\n    isRelevant = relMatch[1].toLowerCase() === \"true\";\n  }\n}\n\n// Извлечение причины отказа\nlet rejectReason = parsed.reject_reason;\nif (!rejectReason && !isRelevant) {\n  const reasonMatch = raw.match(/\"reject_reason\"\\s*:\\s*\"([^\"]+)\"/i);\n  rejectReason = reasonMatch ? reasonMatch[1] : \"Не соответствует критериям\";\n}\n\n// Извлечение питча\nlet pitch = parsed.pitch || \"\";\nif (!pitch && isRelevant) {\n  const pitchMatch = raw.match(/\"pitch\"\\s*:\\s*\"([^\"]+)\"/i);\n  pitch = pitchMatch ? pitchMatch[1] : \"\";\n}\n\n// Очистка питча от шаблонного мусора\npitch = pitch.replace(/^(Здравствуйте|Добрый день)[,.]?\\s*/i, \"\").trim();\n\n// === АБСОЛЮТНЫЙ GUARDRAIL: ДЕТЕРМИНИРОВАННАЯ ФИЛЬТРАЦИЯ ОНЛАЙН-ШКОЛ И АНГЛИЙСКОГО ===\nif (isRelevant) {\n  const fullText = (\n    String(hhData.name || \"\") + \" \" +\n    String(hhData.employer?.name || \"\") + \" \" +\n    String(hhData.description || \"\") + \" \" +\n    pitch\n  ).toLowerCase();\n\n  // 1. Проверка структурированного поля языков HH\n  const langs = Array.isArray(hhData.languages) ? hhData.languages : [];\n  const hasEngLang = langs.some(l => l.id === 'eng' || (l.name && l.name.toLowerCase().includes('англ')));\n\n  // 2. Регексы на английский язык (требования для работы)\n  const engRegex = /(знани[ея]\\s+английского|уровен[ья]\\s+английского|английск[ийого]{2,4}\\s+язык|разговорн[ыйого]{2,4}\\s+английск|свободн[ыйого]{2,4}\\s+английск|делов[ойого]{2,4}\\s+английск|переговор[ыа-я]*\\s+на\\s+английск|english\\s+(level|required|b1|b2|c1|c2|fluent|advanced|intermediate)|\\b(level\\s+)?(b2|c1|c2)\\b(?!\\s*b|\\w)|upper[- ]intermediate|\\badvanced\\s+english\\b|\\bfluent\\s+english\\b)/i;\n\n  // 3. Регексы на онлайн-школы, EdTech и инфобиз\n  const edtechRegex = /(онлайн[- ]?школ|edtech|skyeng|тетрик|tetrica|skillbox|geekbrains|нетолог|фоксфорд|умскул|интернетурок|interneturok|maximum\\s+education|школ[а-я]*\\s+(дизайна|программирования|вокала|музыки|егэ|огэ|ии|ai|английского)|курс[ыа-я]*\\s+по\\s+(программированию|дизайну|маркетингу|ai|ии|английскому)|продаж[а-я]*\\s+курс|вводн[ыйого]{2,4}\\s+урок|подготовк[а-я]*\\s+к\\s+(егэ|огэ)|репетитор|инфобиз|наставничеств|коучинг)/i;\n\n  if (hasEngLang || engRegex.test(fullText)) {\n    isRelevant = false;\n    rejectReason = \"Требуется знание английского языка\";\n    pitch = \"\";\n  } else if (edtechRegex.test(fullText)) {\n    isRelevant = false;\n    rejectReason = \"Онлайн-школа / EdTech / Инфобиз\";\n    pitch = \"\";\n  }\n}\n\nreturn {\n  json: {\n    ...hhData,\n    is_relevant: isRelevant,\n    reject_reason: isRelevant ? null : (rejectReason || \"Не соответствует критериям\"),\n    pitch: isRelevant ? pitch : \"\"\n  }\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -742,7 +750,10 @@
           "id": "lbGgYppJZkZJI2Uo",
           "name": "Google Service Account account"
         }
-      }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
     },
     {
       "parameters": {
@@ -841,11 +852,12 @@
           "id": "lbGgYppJZkZJI2Uo",
           "name": "Google Service Account account"
         }
-      }
+      },
+      "maxTries": 3
     },
     {
       "parameters": {
-        "jsCode": "// Code - Prepare Ollama Body (HeadHunter)\nconst hhData = $input.item.json;\n\n// Чистим HTML из описания\nconst rawDescription = String(hhData.description || \"\");\nconst cleanDescription = rawDescription.replace(/<[^>]*>?/gm, \" \").trim();\n\nconst salaryInfo = hhData.salary \n  ? ((hhData.salary.from ? 'от ' + hhData.salary.from : '') + (hhData.salary.to ? ' до ' + hhData.salary.to : '') + ' ' + (hhData.salary.currency || 'RUR'))\n  : 'не указана';\n\nconst userContent = [\n  \"ВАКАНСИЯ (HeadHunter):\",\n  \"Должность: \" + (hhData.name || \"\"),\n  \"Компания: \" + (hhData.employer?.name || \"\"),\n  \"Зарплата: \" + salaryInfo,\n  \"Описание: \" + cleanDescription.slice(0, 6000),\n  \"\",\n  \"Оцени вакансию и верни строго JSON на русском языке.\"\n].join(\"\\n\");\n\nconst systemPrompt = `Ты — строгий карьерный эксперт и фильтр вакансий для Дмитрия Федотова (Ex-Yandex, Ex-Ozon Fintech, B2B-продажи, коммерческое руководство).\n\nКРИТЕРИИ ПРИЁМА (все должны выполняться):\n1. ФОРМАТ РАБОТЫ (СТРОЖАЙШЕ): ТОЛЬКО 100% ПОЛНАЯ УДАЛЁНКА (Remote / из дома).\n- Подходит: полная удалённая работа из любого города/страны.\n- СТРОГИЙ ОТКАЗ: любой гибрид (даже 1-2 дня в неделю в офисе), работа в офисе, испытательный срок / стажировка в офисе, разъездной формат, вахта (причина: \"Не удаленка / гибрид / офис\").\n- Если в тексте указано \"удаленно не работаем\", \"только в офисе\", \"гибридный график\", \"стажировка в офисе\" — СТРОГИЙ ОТКАЗ (причина: \"Не удаленка / гибрид / офис\").\n2. ГРАФИК РАБОТЫ:\n- Только 5/2 (пятидневка).\n- Если график в тексте НЕ указан — ПРОПУСКАЙ (считай, что подходит 5/2).\n- СТРОГИЙ ОТКАЗ: сменный график, 2/2, 3/3, 1/3, по сменам, ночные смены (причина: \"График не 5/2\").\n3. РОЛЬ (B2B И РУКОВОДСТВО):\n- РОП / Head of Sales / Коммерческий директор / BDM / Key Account Manager / Партнёрские продажи / Enterprise Sales / Менеджер по продажам B2B. Линейный менеджер допустим, только если B2B и фикс от 100 000 ₽.\n4. ЗАРПЛАТА И ФИКС (СТРОГО):\n- Фикс / оклад — СТРОГО от 100 000 ₽.\n- Совокупный доход (фикс + KPI/бонусы/проценты) — от 150 000 ₽.\n- Если оклад/фикс явно указан ниже 100 000 ₽ (например, 30к, 40к, 50к, 60к, 80к) — СТРОГИЙ ОТКАЗ (причина: \"Фикс ниже 100 000 ₽\").\n- Если оклад/фикс в тексте НЕ указан — ПРИНИМАЙ ТОЛЬКО если роль руководящая (РОП, Head of Sales, BDM, Коммерческий директор) в B2B.\n- СТРОГИЙ ОТКАЗ: работа только за процент / без оклада / только комиссия (причина: \"Нет оклада / только процент\").\n\nСТРОГИЙ ОТКАЗ (любой пункт = reject_reason):\n- Онлайн-школы, курсы, детские центры, EdTech B2C, инфобизнес, наставничество, коучинг, продажа вебинаров (причина: \"Инфобиз / онлайн-школа / курсы\")\n- Крипта, криптовалюты, crypto, Web3, блокчейн, криптобиржи, трейдинг, p2p, арбитраж, гемблинг (причина: \"Крипта / трейдинг / Web3 / гемблинг\")\n- Фикс ниже 100 000 ₽ или только процент без оклада (причина: \"Фикс ниже 100 000 ₽\" или \"Нет фикса / только процент\")\n- График не 5/2 (2/2, сменный, по сменам) (причина: \"График не 5/2\")\n- Обязательное свободное знание иностранных языков (C1/Fluent) как требование (если \"плюс\" — допустимо)\n- Оплата только процент / без фиксированного оклада\n- Холодный обзвон на телефоне как основная функция\n- Стажёр / junior / ассистент\n- Вакансия не связана с B2B-продажами или развитием бизнеса\n- 100% строгий офис без удалёнки\n\nСВОДКА ВАКАНСИИ (поле \"pitch\", заполнять ТОЛЬКО если is_relevant: true):\nНи в коем случае НЕ пиши сопроводительное письмо или почему кандидат подходит (НЕ упоминай опыт кандидата, Яндекс, Ozon и т.д.).\nКандидату нужен короткий структурированный обзор САМОЙ вакансии для быстрого сканирования таблицы глазами.\nФормат строго из 3 пунктов в одну строку через разделители:\n🏢 Бизнес: [сфера компании и продукт] | 💰 Доход: [оклад/фикс, KPI, совокупный доход или условия] | 🎯 Задачи: [2-3 главные конкретные обязанности]\n\nПример:\n\"🏢 Бизнес: B2B-логистика и грузоперевозки (Скиф-Карго) | 💰 Доход: фикс от 120 000 ₽ + KPI (от 250 000 ₽) | 🎯 Задачи: перезапуск активных B2B-продаж, развитие пула ключевых клиентов, руководство коммерческим отделом\"\n\n- В блоке think думай предельно кратко (до 40-60 слов).\nОтвечай ТОЛЬКО валидным JSON:\n{\n  \"is_relevant\": true/false,\n  \"reject_reason\": \"одна конкретная причина отказа или null\",\n  \"pitch\": \"текст сводки о вакансии или пустая строка\"\n}`;\n\nconst body = {\n  model: \"deepseek-r1:14b-24k\",\n  format: \"json\",\n  stream: false,\n  options: {\n    num_ctx: 24576,\n    num_predict: 1536,\n    temperature: 0.1\n  },\n  messages: [\n    { role: \"system\", content: systemPrompt },\n    { role: \"user\", content: userContent }\n  ]\n};\n\nreturn {\n  json: {\n    ollamaBody: body,\n    ...hhData\n  }\n};"
+        "jsCode": "// Code - Prepare Ollama Body (HeadHunter)\nconst hhData = $input.item.json;\n\n// Чистим HTML из описания\nconst rawDescription = String(hhData.description || \"\");\nconst cleanDescription = rawDescription.replace(/<[^>]*>?/gm, \" \").trim();\n\nconst salaryInfo = hhData.salary \n  ? ((hhData.salary.from ? 'от ' + hhData.salary.from : '') + (hhData.salary.to ? ' до ' + hhData.salary.to : '') + ' ' + (hhData.salary.currency || 'RUR'))\n  : 'не указана';\n\nconst userContent = [\n  \"ВАКАНСИЯ (HeadHunter):\",\n  \"Должность: \" + (hhData.name || \"\"),\n  \"Компания: \" + (hhData.employer?.name || \"\"),\n  \"Зарплата: \" + salaryInfo,\n  \"Описание: \" + cleanDescription.slice(0, 6000),\n  \"\",\n  \"Оцени вакансию и верни строго JSON на русском языке.\"\n].join(\"\\n\");\n\nconst systemPrompt = `Ты — строгий карьерный эксперт и фильтр вакансий для Дмитрия Федотова (Ex-Yandex, Ex-Ozon Fintech, B2B-продажи, коммерческое руководство).\n\nКРИТЕРИИ ПРИЁМА (все должны выполняться):\n1. ФОРМАТ РАБОТЫ (СТРОЖАЙШЕ): ТОЛЬКО 100% ПОЛНАЯ УДАЛЁНКА (Remote / из дома).\n- Подходит: полная удалённая работа из любого города/страны.\n- СТРОГИЙ ОТКАЗ: любой гибрид (даже 1-2 дня в неделю в офисе), работа в офисе, испытательный срок / стажировка в офисе, разъездной формат, вахта (причина: \"Не удаленка / гибрид / офис\").\n2. ГРАФИК РАБОТЫ:\n- Только 5/2 (пятидневка).\n- Если график в тексте НЕ указан — ПРОПУСКАЙ (считай, что подходит 5/2).\n- СТРОГИЙ ОТКАЗ: сменный график, 2/2, 3/3, 1/3, по сменам, ночные смены (причина: \"График не 5/2\").\n3. РОЛЬ (B2B И РУКОВОДСТВО):\n- РОП / Head of Sales / Коммерческий директор / BDM / Key Account Manager / Партнёрские продажи / Enterprise Sales / Менеджер по продажам B2B. Линейный менеджер допустим, только если B2B и фикс от 100 000 ₽.\n4. ЗАРПЛАТА И ФИКС (СТРОГО):\n- Фикс / оклад — СТРОГО от 100 000 ₽.\n- Совокупный доход (фикс + KPI/бонусы/проценты) — от 150 000 ₽.\n- Если оклад/фикс явно указан ниже 100 000 ₽ (например, 30к, 40к, 50к, 60к, 80к) — СТРОГИЙ ОТКАЗ (причина: \"Фикс ниже 100 000 ₽\").\n- Если оклад/фикс в тексте НЕ указан — ПРИНИМАЙ ТОЛЬКО если роль руководящая (РОП, Head of Sales, BDM, Коммерческий директор) в B2B.\n- СТРОГИЙ ОТКАЗ: работа только за процент / без оклада / только комиссия (причина: \"Нет оклада / только процент\").\n\nСТРОЖАЙШИЙ КАТЕГОРИЧЕСКИЙ ОТКАЗ (любой пункт = reject_reason):\n- ЛЮБЫЕ ОНЛАЙН-ШКОЛЫ, КУРСЫ, EDTECH (как B2C, так и B2B), детские центры, продажа вебинаров/марафонов/интенсивов, образовательные платформы, репетиторство, обучение детей/взрослых, школы дизайна/программирования/языков/ЕГЭ/ОГЭ/музыки, инфобизнес, наставничество, коучинг (причина: \"Онлайн-школа / курсы / EdTech / Инфобиз\")\n- ЛЮБЫЕ ТРЕБОВАНИЯ ЗНАНИЯ АНГЛИЙСКОГО ЯЗЫКА (любой уровень: Intermediate, Upper-Intermediate, B1, B2, C1, C2, Advanced, Fluent, свободный, разговорный, деловой английский, ведение переговоров на английском). Кандидат рассматривает вакансии ТОЛЬКО на русском языке! (причина: \"Требуется знание английского языка\")\n- Крипта, криптовалюты, crypto, Web3, блокчейн, криптобиржи, трейдинг, p2p, арбитраж, гемблинг (причина: \"Крипта / трейдинг / Web3 / гемблинг\")\n- Фикс ниже 100 000 ₽ или только процент без оклада (причина: \"Фикс ниже 100 000 ₽\" или \"Нет фикса / только процент\")\n- График не 5/2 (2/2, сменный, по сменам) (причина: \"График не 5/2\")\n- Оплата только процент / без фиксированного оклада\n- Холодный обзвон на телефоне как основная функция\n- Стажёр / junior / ассистент\n- Вакансия не связана с B2B-продажами или развитием бизнеса\n- 100% строгий офис без удалёнки\n\nСВОДКА ВАКАНСИИ (поле \"pitch\", заполнять ТОЛЬКО если is_relevant: true):\nНи в коем случае НЕ пиши сопроводительное письмо или почему кандидат подходит (НЕ упоминай опыт кандидата, Яндекс, Ozon и т.д.).\nКандидату нужен короткий структурированный обзор САМОЙ вакансии для быстрого сканирования таблицы глазами.\nФормат строго из 3 пунктов в одну строку через разделители:\n🏢 Бизнес: [сфера компании и продукт] | 💰 Доход: [оклад/фикс, KPI, совокупный доход или условия] | 🎯 Задачи: [2-3 главные конкретные обязанности]\n\n- В блоке think думай предельно кратко (до 40-60 слов).\nОтвечай ТОЛЬКО валидным JSON:\n{\n  \"is_relevant\": true/false,\n  \"reject_reason\": \"одна конкретная причина отказа или null\",\n  \"pitch\": \"текст сводки о вакансии или пустая строка\"\n}`;\n\nconst body = {\n  model: \"deepseek-r1:14b-24k\",\n  format: \"json\",\n  stream: false,\n  options: {\n    num_ctx: 24576,\n    num_predict: 1536,\n    temperature: 0.1\n  },\n  messages: [\n    { role: \"system\", content: systemPrompt },\n    { role: \"user\", content: userContent }\n  ]\n};\n\nreturn {\n  json: {\n    ollamaBody: body,\n    ...hhData\n  }\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
