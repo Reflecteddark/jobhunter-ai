@@ -1,5 +1,5 @@
 {
-  "name": "JobHunter AI - Telegram Pipeline (10 Channels + PreFilter + DeepSeek R1 + Google Sheets)",
+  "name": "JobHunter AI - Telegram Pipeline (10 Channels + Fast Evaluator + Google Sheets)",
   "nodes": [
     {
       "parameters": {
@@ -51,11 +51,13 @@
         0
       ],
       "executeOnce": true,
-      "continueOnFail": true
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "amount": 2
+        "amount": 1,
+        "unit": "seconds"
       },
       "id": "0fcd6858-d2f6-47b0-a006-a6e510404c0c",
       "name": "Wait 1",
@@ -65,7 +67,6 @@
         432,
         0
       ],
-      "webhookId": "41ad4de2-afe1-4582-b3ba-c95c2b5ac506",
       "executeOnce": true
     },
     {
@@ -98,11 +99,13 @@
         0
       ],
       "executeOnce": true,
-      "continueOnFail": true
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "amount": 2
+        "amount": 1,
+        "unit": "seconds"
       },
       "id": "6c5bf5f8-5216-455c-976a-9b1bcdbdaed5",
       "name": "Wait 2",
@@ -112,7 +115,6 @@
         800,
         0
       ],
-      "webhookId": "6dae4df1-dcfd-45ff-abf9-62fe06d24a37",
       "executeOnce": true
     },
     {
@@ -145,11 +147,13 @@
         0
       ],
       "executeOnce": true,
-      "continueOnFail": true
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "amount": 2
+        "amount": 1,
+        "unit": "seconds"
       },
       "id": "3c9970e0-f6ec-4cc0-8467-362ffff3f392",
       "name": "Wait 3",
@@ -159,7 +163,6 @@
         1184,
         0
       ],
-      "webhookId": "7f775bdc-d7c4-4b31-9607-14e1c49e5452",
       "executeOnce": true
     },
     {
@@ -192,11 +195,13 @@
         0
       ],
       "executeOnce": true,
-      "continueOnFail": true
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "amount": 2
+        "amount": 1,
+        "unit": "seconds"
       },
       "id": "cacad57b-bd94-496d-9f05-6f30c891e69a",
       "name": "Wait 4",
@@ -206,7 +211,6 @@
         160,
         208
       ],
-      "webhookId": "fc46852d-6d82-4ce2-b84f-a62d7f2f21a1",
       "executeOnce": true
     },
     {
@@ -239,11 +243,13 @@
         208
       ],
       "executeOnce": true,
-      "continueOnFail": true
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "amount": 2
+        "amount": 1,
+        "unit": "seconds"
       },
       "id": "63b56f35-4695-48c9-9b7b-b76f21c3bf82",
       "name": "Wait 5",
@@ -253,7 +259,6 @@
         592,
         208
       ],
-      "webhookId": "94036392-c5cd-460b-b1dd-45d68a235bb4",
       "executeOnce": true
     },
     {
@@ -286,11 +291,13 @@
         208
       ],
       "executeOnce": true,
-      "continueOnFail": true
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "amount": 2
+        "amount": 1,
+        "unit": "seconds"
       },
       "id": "ea646f41-1536-4552-b551-ceda18e94446",
       "name": "Wait 6",
@@ -300,7 +307,6 @@
         1008,
         208
       ],
-      "webhookId": "bd161dcc-9f3e-4b82-8225-7054e12af9a5",
       "executeOnce": true
     },
     {
@@ -333,11 +339,13 @@
         208
       ],
       "executeOnce": true,
-      "continueOnFail": true
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "amount": 2
+        "amount": 1,
+        "unit": "seconds"
       },
       "id": "90b10c9a-f28b-4384-9c3f-cddf961f0d96",
       "name": "Wait 7",
@@ -347,7 +355,6 @@
         160,
         400
       ],
-      "webhookId": "98770ca2-9cb5-4d44-8888-6254c6d6fc20",
       "executeOnce": true
     },
     {
@@ -380,11 +387,13 @@
         400
       ],
       "executeOnce": true,
-      "continueOnFail": true
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "amount": 2
+        "amount": 1,
+        "unit": "seconds"
       },
       "id": "c352c103-e677-4da6-8286-dc7f92a077f7",
       "name": "Wait 8",
@@ -394,7 +403,6 @@
         560,
         400
       ],
-      "webhookId": "afb57061-7942-4aa6-ac88-a4aad7fcb21a",
       "executeOnce": true
     },
     {
@@ -427,11 +435,13 @@
         400
       ],
       "executeOnce": true,
-      "continueOnFail": true
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "amount": 2
+        "amount": 1,
+        "unit": "seconds"
       },
       "id": "6b5a86ac-f34e-44b2-8b24-ca09fa77b6be",
       "name": "Wait 9",
@@ -441,7 +451,6 @@
         960,
         400
       ],
-      "webhookId": "547efe12-b374-41d0-b313-ee813bd6aa79",
       "executeOnce": true
     },
     {
@@ -474,14 +483,15 @@
         400
       ],
       "executeOnce": true,
-      "continueOnFail": true
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
         "authentication": "serviceAccount",
         "documentId": {
           "__rl": true,
-          "value": "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit?gid=63486232#gid=63486232",
+          "value": "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit",
           "mode": "url"
         },
         "sheetName": {
@@ -507,7 +517,9 @@
           "id": "lbGgYppJZkZJI2Uo",
           "name": "Google Service Account account"
         }
-      }
+      },
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -562,7 +574,7 @@
         "operation": "append",
         "documentId": {
           "__rl": true,
-          "value": "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit?gid=63486232#gid=63486232",
+          "value": "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit",
           "mode": "url"
         },
         "sheetName": {
@@ -654,7 +666,9 @@
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 3000
+      "waitBetweenTries": 3000,
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {

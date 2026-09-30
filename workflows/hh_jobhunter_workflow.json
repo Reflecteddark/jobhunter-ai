@@ -1,5 +1,5 @@
 {
-  "name": "JobHunter AI - HeadHunter Pipeline (9 Searches + DeepSeek R1 + Dual Google Sheets)",
+  "name": "JobHunter AI (9x Searches + Fast Evaluator + Google Sheets)",
   "nodes": [
     {
       "parameters": {
@@ -37,7 +37,7 @@
             },
             {
               "name": "period",
-              "value": "7"
+              "value": "2"
             },
             {
               "name": "per_page",
@@ -77,7 +77,9 @@
       "executeOnce": true,
       "retryOnFail": true,
       "waitBetweenTries": 5000,
-      "maxTries": 3
+      "maxTries": 3,
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -95,7 +97,7 @@
             },
             {
               "name": "period",
-              "value": "7"
+              "value": "2"
             },
             {
               "name": "per_page",
@@ -135,7 +137,9 @@
       "executeOnce": true,
       "retryOnFail": true,
       "waitBetweenTries": 5000,
-      "maxTries": 3
+      "maxTries": 3,
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -153,7 +157,7 @@
             },
             {
               "name": "period",
-              "value": "7"
+              "value": "2"
             },
             {
               "name": "per_page",
@@ -193,7 +197,9 @@
       "executeOnce": true,
       "retryOnFail": true,
       "waitBetweenTries": 5000,
-      "maxTries": 3
+      "maxTries": 3,
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -211,7 +217,7 @@
             },
             {
               "name": "period",
-              "value": "7"
+              "value": "2"
             },
             {
               "name": "per_page",
@@ -251,7 +257,9 @@
       "executeOnce": true,
       "retryOnFail": true,
       "waitBetweenTries": 5000,
-      "maxTries": 3
+      "maxTries": 3,
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -269,7 +277,7 @@
             },
             {
               "name": "period",
-              "value": "7"
+              "value": "2"
             },
             {
               "name": "per_page",
@@ -309,7 +317,9 @@
       "executeOnce": true,
       "retryOnFail": true,
       "waitBetweenTries": 5000,
-      "maxTries": 3
+      "maxTries": 3,
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -327,7 +337,7 @@
             },
             {
               "name": "period",
-              "value": "7"
+              "value": "2"
             },
             {
               "name": "per_page",
@@ -367,7 +377,9 @@
       "executeOnce": true,
       "retryOnFail": true,
       "waitBetweenTries": 5000,
-      "maxTries": 3
+      "maxTries": 3,
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -385,7 +397,7 @@
             },
             {
               "name": "period",
-              "value": "7"
+              "value": "2"
             },
             {
               "name": "per_page",
@@ -425,7 +437,9 @@
       "executeOnce": true,
       "retryOnFail": true,
       "waitBetweenTries": 5000,
-      "maxTries": 3
+      "maxTries": 3,
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -443,7 +457,7 @@
             },
             {
               "name": "period",
-              "value": "7"
+              "value": "2"
             },
             {
               "name": "per_page",
@@ -483,14 +497,16 @@
       "executeOnce": true,
       "retryOnFail": true,
       "waitBetweenTries": 5000,
-      "maxTries": 3
+      "maxTries": 3,
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
         "authentication": "serviceAccount",
         "documentId": {
           "__rl": true,
-          "value": "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit?gid=63486232#gid=63486232",
+          "value": "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit",
           "mode": "url"
         },
         "sheetName": {
@@ -516,11 +532,13 @@
           "id": "lbGgYppJZkZJI2Uo",
           "name": "Google Service Account account"
         }
-      }
+      },
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "jsCode": "// 1. Получаем существующие ID из таблицы\nlet existingIds = new Set();\ntry {\n  const sheetItems = $input.all();\n  existingIds = new Set(\n    sheetItems\n      .map(item => String(item.json.vacancy_id || ''))\n      .filter(id => id.length > 0)\n  );\n  console.log('Уникальных ID в таблице:', existingIds.size);\n} catch (e) {\n  console.log('Ошибка чтения таблицы:', e.message);\n  existingIds = new Set();\n}\n\n// 2. Имена всех 9 нод поиска\nconst searchNodeNames = [\n  'HH - РОП / Head of Sales',\n  'HH - BDM / Развитие бизнеса',\n  'HH - Key Account Enterprise',\n  'HH - FinTech & Banking B2B',\n  'HH - IT & SaaS Enterprise',\n  'HH - Продажи Fintech & SaaS',\n  'HH - Партнёрские продажи',\n  'HH - Ключевые клиенты B2B',\n  'HH - Менеджер по продажам'\n];\n\nlet allRawVacancies = [];\nfor (const name of searchNodeNames) {\n  try {\n    const nodeResults = $(name).all();\n    for (const res of nodeResults) {\n      if (res.json && Array.isArray(res.json.items)) {\n        allRawVacancies.push(...res.json.items);\n      } else if (res.json && res.json.id) {\n        allRawVacancies.push(res.json);\n      }\n    }\n  } catch (err) {\n    console.log(`Нода ${name} еще не выполнена`);\n  }\n}\n\nconsole.log(`Всего собрано вакансий с поисков: ${allRawVacancies.length}`);\n\n// 3. Отбираем только УНИКАЛЬНЫЕ вакансии\nconst uniqueItems = [];\nconst seenInCurrentRun = new Set();\n\nfor (const vacancy of allRawVacancies) {\n  const id = String(vacancy.id || '');\n  if (id && !existingIds.has(id) && !seenInCurrentRun.has(id)) {\n    seenInCurrentRun.add(id);\n    uniqueItems.push({ json: { id: id } });\n  }\n}\n\nconsole.log(`Новых уникальных вакансий: ${uniqueItems.length}`);\nreturn uniqueItems;"
+        "jsCode": "// 1. Собрать существующие ID из обоих листов (Ready и Rejected)\nlet existingIds = new Set();\ntry {\n  const readyItems = $('Google Sheets Read').all();\n  for (const item of readyItems) {\n    const id = String(item.json.vacancy_id || '').trim();\n    if (id) existingIds.add(id);\n  }\n} catch (e) {\n  console.log('Лист Ready не вернул строк или пуст:', e.message);\n}\n\ntry {\n  const rejectedItems = $('Google Sheets Read - Rejected').all();\n  for (const item of rejectedItems) {\n    const id = String(item.json.vacancy_id || '').trim();\n    if (id) existingIds.add(id);\n  }\n} catch (e) {\n  console.log('Лист Rejected не вернул строк или пуст:', e.message);\n}\n\nconsole.log('Всего существующих ID в Google Sheets:', existingIds.size);\n\n// 2. Собрать результаты всех 9 поисковых нод\nconst searchNodeNames = [\n  'HH - РОП / Head of Sales',\n  'HH - BDM / Развитие бизнеса',\n  'HH - Key Account Enterprise',\n  'HH - FinTech & Banking B2B',\n  'HH - IT & SaaS Enterprise',\n  'HH - Продажи Fintech & SaaS',\n  'HH - Партнёрские продажи',\n  'HH - Ключевые клиенты B2B',\n  'HH - Менеджер по продажам'\n];\n\nlet allRawVacancies = [];\nfor (const name of searchNodeNames) {\n  try {\n    const nodeResults = $(name).all();\n    for (const res of nodeResults) {\n      if (res.json && Array.isArray(res.json.items)) {\n        allRawVacancies.push(...res.json.items);\n      } else if (res.json && res.json.id) {\n        allRawVacancies.push(res.json);\n      }\n    }\n  } catch (err) {\n    console.log(`Нода ${name} не вернула данных:`, err.message);\n  }\n}\n\nconsole.log(`Всего найдено вакансий в выдаче HH: ${allRawVacancies.length}`);\n\n// 3. Дедупликация против базы и внутри текущего запуска\nconst uniqueItems = [];\nconst seenInCurrentRun = new Set();\n\nfor (const vacancy of allRawVacancies) {\n  const id = String(vacancy.id || '').trim();\n  if (id && !existingIds.has(id) && !seenInCurrentRun.has(id)) {\n    seenInCurrentRun.add(id);\n    uniqueItems.push({ json: { id: id } });\n  }\n}\n\nconsole.log(`Уникальных новых вакансий для анализа: ${uniqueItems.length}`);\nreturn uniqueItems;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -567,7 +585,9 @@
       "name": "HTTP - HH Details",
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 2000
+      "waitBetweenTries": 2000,
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -609,7 +629,7 @@
         "operation": "append",
         "documentId": {
           "__rl": true,
-          "value": "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit?gid=1437518602#gid=1437518602",
+          "value": "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit",
           "mode": "url"
         },
         "sheetName": {
@@ -701,7 +721,9 @@
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 3000
+      "waitBetweenTries": 3000,
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -709,7 +731,7 @@
         "operation": "append",
         "documentId": {
           "__rl": true,
-          "value": "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit?gid=63430195#gid=63430195",
+          "value": "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit",
           "mode": "url"
         },
         "sheetName": {
@@ -717,7 +739,7 @@
           "value": 63430195,
           "mode": "list",
           "cachedResultName": "JobHunt_Rejected",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit?gid=63430195"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit#gid=63430195"
         },
         "columns": {
           "mappingMode": "defineBelow",
@@ -801,11 +823,14 @@
           "name": "Google Service Account account"
         }
       },
-      "maxTries": 3
+      "maxTries": 3,
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "amount": 2
+        "amount": 1,
+        "unit": "seconds"
       },
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
@@ -814,12 +839,12 @@
         -288
       ],
       "id": "424014b7-dd04-463a-a15f-53391aae6172",
-      "name": "Wait",
-      "webhookId": "wait-webhook-jobhunter"
+      "name": "Wait"
     },
     {
       "parameters": {
-        "amount": 2
+        "amount": 1,
+        "unit": "seconds"
       },
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
@@ -828,12 +853,12 @@
         -288
       ],
       "id": "36e29db5-7999-4552-944e-fc8239778881",
-      "name": "Wait1",
-      "webhookId": "wait-webhook-jobhunter"
+      "name": "Wait1"
     },
     {
       "parameters": {
-        "amount": 2
+        "amount": 1,
+        "unit": "seconds"
       },
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
@@ -842,12 +867,12 @@
         -288
       ],
       "id": "d078f587-206b-4aca-b2e0-09e3bd5b9d66",
-      "name": "Wait2",
-      "webhookId": "wait-webhook-jobhunter"
+      "name": "Wait2"
     },
     {
       "parameters": {
-        "amount": 2
+        "amount": 1,
+        "unit": "seconds"
       },
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
@@ -856,12 +881,12 @@
         -288
       ],
       "id": "9cedffaa-d161-4d69-bec8-114709d72b9f",
-      "name": "Wait3",
-      "webhookId": "wait-webhook-jobhunter"
+      "name": "Wait3"
     },
     {
       "parameters": {
-        "amount": 2
+        "amount": 1,
+        "unit": "seconds"
       },
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
@@ -870,12 +895,12 @@
         -64
       ],
       "id": "192d284b-6c62-49b7-9604-71291cad36ed",
-      "name": "Wait4",
-      "webhookId": "wait-webhook-jobhunter"
+      "name": "Wait4"
     },
     {
       "parameters": {
-        "amount": 2
+        "amount": 1,
+        "unit": "seconds"
       },
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
@@ -884,12 +909,12 @@
         -64
       ],
       "id": "dba2d224-7dc9-4aea-bec0-6e6fa656c38d",
-      "name": "Wait5",
-      "webhookId": "wait-webhook-jobhunter"
+      "name": "Wait5"
     },
     {
       "parameters": {
-        "amount": 2
+        "amount": 1,
+        "unit": "seconds"
       },
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
@@ -898,8 +923,7 @@
         -64
       ],
       "id": "1aa171f1-3f1e-44a4-a57c-b8df202641b7",
-      "name": "Wait6",
-      "webhookId": "wait-webhook-jobhunter"
+      "name": "Wait6"
     },
     {
       "parameters": {
@@ -931,7 +955,7 @@
             },
             {
               "name": "period",
-              "value": "7"
+              "value": "2"
             },
             {
               "name": "per_page",
@@ -955,6 +979,9 @@
               "value": "Bearer YOUR_HH_API_BEARER_TOKEN"
             }
           ]
+        },
+        "options": {
+          "timeout": 30000
         }
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -964,27 +991,18 @@
         -64
       ],
       "id": "24931ae1-310c-4748-8205-f140206a905e",
-      "name": "HH - Менеджер по продажам"
-    },
-    {
-      "parameters": {
-        "jsCode": "const sheetItems = $input.all();\nconst ids = sheetItems\n  .map(item => String(item.json.vacancy_id || '').trim())\n  .filter(id => id.length > 0);\nconsole.log('Считано ID из JobHunt_РОП:', ids.length);\nreturn [{ json: { readyIds: ids } }];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -3750,
-        224
-      ],
-      "id": "8170ff99-6ae0-4b19-b54c-c1bd5252467a",
-      "name": "Code - Aggregate Ready IDs"
+      "name": "HH - Менеджер по продажам",
+      "retryOnFail": true,
+      "executeOnce": true,
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
         "authentication": "serviceAccount",
         "documentId": {
           "__rl": true,
-          "value": "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit?gid=63430195#gid=63430195",
+          "value": "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit",
           "mode": "url"
         },
         "sheetName": {
@@ -992,7 +1010,7 @@
           "value": 63430195,
           "mode": "list",
           "cachedResultName": "JobHunt_Rejected",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit?gid=63430195"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit#gid=63430195"
         },
         "options": {}
       },
@@ -1009,12 +1027,14 @@
           "id": "lbGgYppJZkZJI2Uo",
           "name": "Google Service Account account"
         }
-      }
+      },
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// Code - Fast Evaluator & Pitch Generator (HeadHunter)\nconst hhData = $input.item.json;\n\nconst name = String(hhData.name || '');\nconst emp = String(hhData.employer?.name || '');\nconst rawDesc = String(hhData.description || '').replace(/<[^>]*>?/gm, ' ').replace(/\\s+/g, ' ').trim();\nconst fullText = (name + ' ' + emp + ' ' + rawDesc).toLowerCase();\n\n// === РЕГУЛЯРНЫЕ ВЫРАЖЕНИЯ ФИЛЬТРАЦИИ ===\nconst engRegex = /(английск[а-я]\\s+язык|английск[а-я]\\s+реч|уров[а-я]{2,4}\\s+английск|знан[а-я]{2,4}\\s+английск|владен[а-я]{2,4}\\s+английск|разговорн[а-я]{2,4}\\s+английск|делов[а-я]*\\s+английск|english\\s+(level|required|b1|b2|c1|c2|fluent|advanced|intermediate)|\\b(level\\s+)?(b2|c1|c2)\\b(?!\\s*b|\\w)|upper[- ]intermediate|\\badvanced\\s+english\\b|\\bfluent\\s+english\\b)/i;\nconst edtechRegex = /(онлайн[- ]?школ|edtech|skyeng|фоксфорд|tetrica|тетрика|skillbox|geekbrains|нетолог|синерг|лайк|like\\s*центр|interneturok|maximum\\s+education|детск[а-я]*\\s+(центр|клуб|сад|школ|развит|обучен|программ|ai|it)|курс[а-я]*\\s+для\\s+(детей|школьник|подростк|ai|it|программ)|школ[а-я]*\\s+программирован|онлайн[- ]?курс|обучающ[а-я]*\\s+платформ|репетитор|вебинар|марафон|интенсив|инфобиз|наставничеств|коучинг)/i;\nconst cryptoRegex = /(криптовалют|криптобирж|crypto|web3|блокчейн|p2p\\s+арбитраж|гемблинг|беттинг|казино)/i;\nconst badRolesRegex = /(стажер|junior|ассистент|помощник|холодн[а-я]*\\s+обзвон|оператор\\s+колл[- ]?центра|оператор\\s+на\\s+телефон)/i;\n\n// 1. Проверка английского языка\nconst langs = Array.isArray(hhData.languages) ? hhData.languages : [];\nconst hasEng = langs.some(l => l.id === 'eng' || (l.name && l.name.toLowerCase().includes('англ')));\nif (hasEng || engRegex.test(fullText)) {\n  return { json: { ...hhData, is_relevant: false, reject_reason: \"Требуется знание английского языка\", pitch: \"\" } };\n}\n\n// 2. Проверка онлайн-школ и EdTech\nif (edtechRegex.test(fullText)) {\n  return { json: { ...hhData, is_relevant: false, reject_reason: \"Онлайн-школа / EdTech / Инфобиз\", pitch: \"\" } };\n}\n\n// 3. Проверка крипты и гемблинга\nif (cryptoRegex.test(fullText)) {\n  return { json: { ...hhData, is_relevant: false, reject_reason: \"Крипта / трейдинг / Web3 / гемблинг\", pitch: \"\" } };\n}\n\n// 4. Проверка нецелевых ролей (стажеры, ассистенты, колл-центр)\nif (badRolesRegex.test(name.toLowerCase())) {\n  return { json: { ...hhData, is_relevant: false, reject_reason: \"Нецелевая роль (стажер / ассистент / колл-центр)\", pitch: \"\" } };\n}\n\n// 5. Проверка формата (строго удаленка)\nconst isExplicitRemote = (hhData.schedule && hhData.schedule.id === 'remote') ||\n  (Array.isArray(hhData.work_format) && hhData.work_format.some(wf => wf.id === 'remote' || wf.name?.toLowerCase().includes('удален'))) ||\n  /100%\\s*удален|полная\\s+удален|только\\s+удален|удаленный\\s+формат/i.test(fullText);\nconst isExplicitOffice = /(только\\s+в\\s+офис|работа\\s+в\\s+офисе|офисный\\s+формат|на\\s+территории\\s+работодателя|гибридный\\s+формат|испытательный\\s+срок\\s+в\\s+офисе)/i.test(fullText);\nif (isExplicitOffice && !isExplicitRemote) {\n  return { json: { ...hhData, is_relevant: false, reject_reason: \"Не удаленка / офис / гибрид\", pitch: \"\" } };\n}\n\n// 6. Проверка зарплаты (фикс от 100 000 ₽)\nif (hhData.salary && (hhData.salary.currency === 'RUR' || !hhData.salary.currency)) {\n  const toSal = hhData.salary.to;\n  const fromSal = hhData.salary.from;\n  if (toSal && toSal < 100000 && (!fromSal || fromSal < 100000)) {\n    return { json: { ...hhData, is_relevant: false, reject_reason: \"Фикс ниже 100 000 ₽\", pitch: \"\" } };\n  }\n}\nif (/только\\s+процент|без\\s+оклада|оплата\\s+за\\s+результат\\s+без\\s+оклада/i.test(fullText)) {\n  return { json: { ...hhData, is_relevant: false, reject_reason: \"Нет оклада / только процент\", pitch: \"\" } };\n}\n\n// 7. График работы\nif (/график\\s+(2\\/2|3\\/3|1\\/3|сменный|по\\s+сменам|ночные)/i.test(fullText)) {\n  return { json: { ...hhData, is_relevant: false, reject_reason: \"График работы не 5/2\", pitch: \"\" } };\n}\n\n// === ВСЕ ПРОВЕРКИ ПРОЙДЕНЫ -> ВАКАНСИЯ ПОДХОДИТ! ===\nconst salStr = hhData.salary\n  ? ((hhData.salary.from ? 'от ' + hhData.salary.from : '') + (hhData.salary.to ? ' до ' + hhData.salary.to : '') + ' ' + (hhData.salary.currency || 'RUR'))\n  : 'по договоренности';\n\n// Извлечение обязанностей для емкого Pitch\nlet tasks = '';\nconst taskMatch = rawDesc.match(/(?:обязанности|задачи|предстоит|чем\\s+предстоит\\s+заниматься)[:\\s]+([^.!?\\n]{20,180})/i);\nif (taskMatch) {\n  tasks = taskMatch[1].trim();\n} else {\n  tasks = rawDesc.slice(0, 120).trim() + '...';\n}\n\nconst pitch = `🏢 Бизнес: ${emp || 'B2B'} | 💰 Доход: ${salStr} | 🎯 Задачи: ${tasks}`;\n\nreturn {\n  json: {\n    ...hhData,\n    is_relevant: true,\n    reject_reason: null,\n    pitch: pitch\n  }\n};"
+        "jsCode": "// Code - Fast Evaluator & Pitch Generator (HeadHunter)\nconst hhData = $input.item.json;\n\n// 0. Защита от ошибок HTTP / отсутствия данных\nif (!hhData || hhData.error || !hhData.id) {\n  return {\n    json: {\n      id: (hhData && hhData.id) || 'error',\n      alternate_url: '',\n      name: 'Ошибка загрузки вакансии',\n      employer: { name: 'Неизвестно' },\n      salary: null,\n      is_relevant: false,\n      reject_reason: 'Ошибка API / Вакансия недоступна',\n      pitch: ''\n    }\n  };\n}\n\n// 1. Проверка архивности\nif (hhData.archived === true) {\n  return {\n    json: {\n      ...hhData,\n      is_relevant: false,\n      reject_reason: 'Вакансия в архиве',\n      pitch: ''\n    }\n  };\n}\n\nconst name = String(hhData.name || '');\nconst emp = String(hhData.employer?.name || '');\nconst rawDesc = String(hhData.description || '').replace(/<[^>]*>?/gm, ' ').replace(/\\s+/g, ' ').trim();\nconst fullText = (name + ' ' + emp + ' ' + rawDesc).toLowerCase();\n\n// === Регулярные выражения фильтров ===\nconst engRegex = /(анг[л-я]\\s+яз|анг[л-я]\\s+яп|анг[л-я]{2,4}\\s+b[12]|анг[л-я]{2,4}\\s+c[12]|анг[л-я]{2,4}\\s+int|анг[л-я]{2,4}\\s+adv|анг[л-я]*\\s+свободн|english\\s+(level|required|b1|b2|c1|c2|fluent|advanced|intermediate)|\\b(level\\s+)?(b2|c1|c2)\\b(?!\\s*b|\\w)|upper[- ]intermediate|\\badvanced\\s+english\\b|\\bfluent\\s+english\\b)/i;\nconst edtechRegex = /(онлайн[- ]?школ|edtech|skyeng|фоксфорд|tetrica|нетологи|skillbox|geekbrains|синерги|лайк\\s*центр|like\\s*центр|interneturok|maximum\\s+education|курс[а-я]*\\s+(английск|программир|дет|школьн|егэ|огэ|массаж|ai|it)|обучен[а-я]*\\s+детей\\s+(английск|программир|шахмат|ai|it|робототехник)|вебинар[а-я]*\\s+продаж|авто[- ]?вебинар|марафон[а-я]*\\s+продаж|интенсив|инфобиз|наставничеств|коучинг)/i;\nconst cryptoRegex = /(криптовалют|криптобирж|crypto|web3|блокчейн|p2p\\s+арбитраж|гемблинг|беттинг|казино)/i;\nconst badRolesRegex = /(стажер|junior|ассистент|помощник|холодн[а-я]*\\s+обзвон|оператор\\s+колл[- ]?центра|оператор\\s+на\\s+телефоне)/i;\n\n// 2. Проверка английского языка\nconst langs = Array.isArray(hhData.languages) ? hhData.languages : [];\nconst hasEng = langs.some(l => l.id === 'eng' || (l.name && l.name.toLowerCase().includes('англ')));\nif (hasEng || engRegex.test(fullText)) {\n  return { json: { ...hhData, is_relevant: false, reject_reason: \"Требуется знание английского языка\", pitch: \"\" } };\n}\n\n// 3. Проверка онлайн-школ и EdTech\nif (edtechRegex.test(fullText)) {\n  return { json: { ...hhData, is_relevant: false, reject_reason: \"Онлайн-школа / EdTech / Инфобиз\", pitch: \"\" } };\n}\n\n// 4. Проверка крипты и гемблинга\nif (cryptoRegex.test(fullText)) {\n  return { json: { ...hhData, is_relevant: false, reject_reason: \"Крипта / трейдинг / Web3 / гемблинг\", pitch: \"\" } };\n}\n\n// 5. Проверка нецелевых ролей (стажеры, ассистенты, колл-центр)\nif (badRolesRegex.test(name.toLowerCase())) {\n  return { json: { ...hhData, is_relevant: false, reject_reason: \"Нецелевая роль (стажер / ассистент / колл-центр)\", pitch: \"\" } };\n}\n\n// 6. Проверка формата (строго удаленка)\nconst isExplicitRemote = (hhData.schedule && hhData.schedule.id === 'remote') ||\n  (Array.isArray(hhData.work_format) && hhData.work_format.some(wf => wf.id === 'remote' || wf.name?.toLowerCase().includes('удален'))) ||\n  /100%\\s*удален|полная\\s+удален|только\\s+удален|удаленный\\s+формат|дистанционный\\s+формат/i.test(fullText);\nconst isExplicitOffice = /(только\\s+в\\s+офис|работа\\s+в\\s+офисе|офисный\\s+формат|на\\s+территории\\s+работодателя|гибридный\\s+формат|испытательный\\s+срок\\s+в\\s+офисе)/i.test(fullText);\n\nif (isExplicitOffice || !isExplicitRemote) {\n  return { json: { ...hhData, is_relevant: false, reject_reason: \"Не удаленка / офис / гибрид\", pitch: \"\" } };\n}\n\n// 7. Проверка зарплаты (фикс от 100 000 ₽ с учетом валют)\nif (hhData.salary) {\n  const curr = (hhData.salary.currency || 'RUR').toUpperCase();\n  const toSal = hhData.salary.to;\n  const fromSal = hhData.salary.from;\n  let multiplier = 1;\n  if (curr === 'USD' || curr === 'EUR') multiplier = 90;\n  else if (curr === 'KZT') multiplier = 0.2;\n  else if (curr === 'BYR' || curr === 'BYN') multiplier = 28;\n\n  const effectiveTo = toSal ? toSal * multiplier : null;\n  const effectiveFrom = fromSal ? fromSal * multiplier : null;\n\n  if (effectiveTo && effectiveTo < 100000 && (!effectiveFrom || effectiveFrom < 100000)) {\n    return { json: { ...hhData, is_relevant: false, reject_reason: \"Фикс ниже 100 000 ₽\", pitch: \"\" } };\n  }\n}\n\nif (/только\\s+процент|без\\s+оклада|оплата\\s+за\\s+результат\\s+без\\s+оклада/i.test(fullText)) {\n  return { json: { ...hhData, is_relevant: false, reject_reason: \"Нет оклада / только процент\", pitch: \"\" } };\n}\n\n// 8. График работы (не сменный)\nif (/график\\s+(2\\/2|3\\/3|1\\/3|сменный|по\\s+сменам|ночные)/i.test(fullText)) {\n  return { json: { ...hhData, is_relevant: false, reject_reason: \"График работы не 5/2\", pitch: \"\" } };\n}\n\n// === ВСЕ ПРОВЕРКИ ПРОЙДЕНЫ -> ВАКАНСИЯ ПОДХОДИТ! ===\nconst salStr = hhData.salary\n  ? ((hhData.salary.from ? 'от ' + hhData.salary.from : '') + (hhData.salary.to ? ' до ' + hhData.salary.to : '') + ' ' + (hhData.salary.currency || 'RUR'))\n  : 'по договоренности';\n\n// Извлечение обязанностей для емкого Pitch\nlet tasks = '';\nconst taskMatch = rawDesc.match(/(?:обязанности|задачи|предстоит|чем\\s+предстоит\\s+заниматься)[:\\s]+([^.!?\\n]{20,180})/i);\nif (taskMatch) {\n  tasks = taskMatch[1].trim();\n} else {\n  tasks = rawDesc.slice(0, 120).trim() + '...';\n}\n\nconst pitch = `🏢 Бизнес: ${emp || 'B2B'} | 💰 Доход: ${salStr} | 🎯 Задачи: ${tasks}`;\n\nreturn {\n  json: {\n    ...hhData,\n    is_relevant: true,\n    reject_reason: null,\n    pitch: pitch\n  }\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1130,7 +1150,7 @@
       "main": [
         [
           {
-            "node": "Code - Aggregate Ready IDs",
+            "node": "Google Sheets Read - Rejected",
             "type": "main",
             "index": 0
           }
@@ -1280,17 +1300,6 @@
         [
           {
             "node": "Google Sheets Read",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Code - Aggregate Ready IDs": {
-      "main": [
-        [
-          {
-            "node": "Google Sheets Read - Rejected",
             "type": "main",
             "index": 0
           }
