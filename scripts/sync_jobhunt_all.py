@@ -132,6 +132,12 @@ def export_to_excel(rows, headers, output_path):
     print(f"Excel tracker saved to {output_path}")
 
 def sync_all():
+    # Working hours check: strictly 09:00 to 18:00 (MSK)
+    now = datetime.datetime.now()
+    if now.hour < 9 or now.hour > 18 or (now.hour == 18 and now.minute > 0):
+        print(f"[{now.strftime('%Y-%m-%d %H:%M:%S')}] Outside working hours (09:00 - 18:00). Skipping sync.")
+        return
+
     print(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting full email movement sync...")
     
     # 1. Connect to Google Sheets
