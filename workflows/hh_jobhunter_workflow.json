@@ -58,11 +58,11 @@
           "parameters": [
             {
               "name": "User-Agent",
-              "value": "JobApp/1.0 (your-email@example.com)"
+              "value": "JobApp/1.0 (dmitriyfedotov1908@gmail.com)"
             },
             {
               "name": "Authorization",
-              "value": "Bearer YOUR_HH_API_BEARER_TOKEN"
+              "value": "Bearer APPLO0LMM7B8JG5P1D6Q3HMEIPTO6HADITJMTP3ENL0O98MFPSL4GTA6IRUQBVF0"
             }
           ]
         },
@@ -141,11 +141,11 @@
           "parameters": [
             {
               "name": "User-Agent",
-              "value": "JobApp/1.0 (your-email@example.com)"
+              "value": "JobApp/1.0 (dmitriyfedotov1908@gmail.com)"
             },
             {
               "name": "Authorization",
-              "value": "Bearer YOUR_HH_API_BEARER_TOKEN"
+              "value": "Bearer APPLO0LMM7B8JG5P1D6Q3HMEIPTO6HADITJMTP3ENL0O98MFPSL4GTA6IRUQBVF0"
             }
           ]
         },
@@ -224,11 +224,11 @@
           "parameters": [
             {
               "name": "User-Agent",
-              "value": "JobApp/1.0 (your-email@example.com)"
+              "value": "JobApp/1.0 (dmitriyfedotov1908@gmail.com)"
             },
             {
               "name": "Authorization",
-              "value": "Bearer YOUR_HH_API_BEARER_TOKEN"
+              "value": "Bearer APPLO0LMM7B8JG5P1D6Q3HMEIPTO6HADITJMTP3ENL0O98MFPSL4GTA6IRUQBVF0"
             }
           ]
         },
@@ -307,11 +307,11 @@
           "parameters": [
             {
               "name": "User-Agent",
-              "value": "JobApp/1.0 (your-email@example.com)"
+              "value": "JobApp/1.0 (dmitriyfedotov1908@gmail.com)"
             },
             {
               "name": "Authorization",
-              "value": "Bearer YOUR_HH_API_BEARER_TOKEN"
+              "value": "Bearer APPLO0LMM7B8JG5P1D6Q3HMEIPTO6HADITJMTP3ENL0O98MFPSL4GTA6IRUQBVF0"
             }
           ]
         },
@@ -390,11 +390,11 @@
           "parameters": [
             {
               "name": "User-Agent",
-              "value": "JobApp/1.0 (your-email@example.com)"
+              "value": "JobApp/1.0 (dmitriyfedotov1908@gmail.com)"
             },
             {
               "name": "Authorization",
-              "value": "Bearer YOUR_HH_API_BEARER_TOKEN"
+              "value": "Bearer APPLO0LMM7B8JG5P1D6Q3HMEIPTO6HADITJMTP3ENL0O98MFPSL4GTA6IRUQBVF0"
             }
           ]
         },
@@ -473,11 +473,11 @@
           "parameters": [
             {
               "name": "User-Agent",
-              "value": "JobApp/1.0 (your-email@example.com)"
+              "value": "JobApp/1.0 (dmitriyfedotov1908@gmail.com)"
             },
             {
               "name": "Authorization",
-              "value": "Bearer YOUR_HH_API_BEARER_TOKEN"
+              "value": "Bearer APPLO0LMM7B8JG5P1D6Q3HMEIPTO6HADITJMTP3ENL0O98MFPSL4GTA6IRUQBVF0"
             }
           ]
         },
@@ -556,11 +556,11 @@
           "parameters": [
             {
               "name": "User-Agent",
-              "value": "JobApp/1.0 (your-email@example.com)"
+              "value": "JobApp/1.0 (dmitriyfedotov1908@gmail.com)"
             },
             {
               "name": "Authorization",
-              "value": "Bearer YOUR_HH_API_BEARER_TOKEN"
+              "value": "Bearer APPLO0LMM7B8JG5P1D6Q3HMEIPTO6HADITJMTP3ENL0O98MFPSL4GTA6IRUQBVF0"
             }
           ]
         },
@@ -639,11 +639,11 @@
           "parameters": [
             {
               "name": "User-Agent",
-              "value": "JobApp/1.0 (your-email@example.com)"
+              "value": "JobApp/1.0 (dmitriyfedotov1908@gmail.com)"
             },
             {
               "name": "Authorization",
-              "value": "Bearer YOUR_HH_API_BEARER_TOKEN"
+              "value": "Bearer APPLO0LMM7B8JG5P1D6Q3HMEIPTO6HADITJMTP3ENL0O98MFPSL4GTA6IRUQBVF0"
             }
           ]
         },
@@ -690,7 +690,7 @@
         "authentication": "serviceAccount",
         "documentId": {
           "__rl": true,
-          "value": "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit",
+          "value": "https://docs.google.com/spreadsheets/d/1rmM-J_XKOuGJAiaB2_McdfP0Wo_5w4NA6Xx3KXXuTq8/edit",
           "mode": "url"
         },
         "sheetName": {
@@ -698,7 +698,7 @@
           "value": 63486232,
           "mode": "list",
           "cachedResultName": "JobHunt_РОП",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit#gid=63486232"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1rmM-J_XKOuGJAiaB2_McdfP0Wo_5w4NA6Xx3KXXuTq8/edit#gid=63486232"
         },
         "options": {}
       },
@@ -742,11 +742,11 @@
           "parameters": [
             {
               "name": "User-Agent",
-              "value": "JobApp/1.0 (your-email@example.com)"
+              "value": "JobApp/1.0 (dmitriyfedotov1908@gmail.com)"
             },
             {
               "name": "Authorization",
-              "value": "Bearer YOUR_HH_API_BEARER_TOKEN"
+              "value": "Bearer APPLO0LMM7B8JG5P1D6Q3HMEIPTO6HADITJMTP3ENL0O98MFPSL4GTA6IRUQBVF0"
             }
           ]
         },
@@ -814,7 +814,7 @@
         "operation": "append",
         "documentId": {
           "__rl": true,
-          "value": "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit",
+          "value": "https://docs.google.com/spreadsheets/d/1rmM-J_XKOuGJAiaB2_McdfP0Wo_5w4NA6Xx3KXXuTq8/edit",
           "mode": "url"
         },
         "sheetName": {
@@ -822,7 +822,7 @@
           "value": 63486232,
           "mode": "list",
           "cachedResultName": "JobHunt_РОП",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit#gid=63486232"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1rmM-J_XKOuGJAiaB2_McdfP0Wo_5w4NA6Xx3KXXuTq8/edit#gid=63486232"
         },
         "columns": {
           "mappingMode": "defineBelow",
@@ -916,7 +916,7 @@
         "operation": "append",
         "documentId": {
           "__rl": true,
-          "value": "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit",
+          "value": "https://docs.google.com/spreadsheets/d/1rmM-J_XKOuGJAiaB2_McdfP0Wo_5w4NA6Xx3KXXuTq8/edit",
           "mode": "url"
         },
         "sheetName": {
@@ -924,7 +924,7 @@
           "value": 63430195,
           "mode": "list",
           "cachedResultName": "JobHunt_Rejected",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit#gid=63430195"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1rmM-J_XKOuGJAiaB2_McdfP0Wo_5w4NA6Xx3KXXuTq8/edit#gid=63430195"
         },
         "columns": {
           "mappingMode": "defineBelow",
@@ -1169,11 +1169,11 @@
           "parameters": [
             {
               "name": "User-Agent",
-              "value": "JobApp/1.0 (your-email@example.com)"
+              "value": "JobApp/1.0 (dmitriyfedotov1908@gmail.com)"
             },
             {
               "name": "Authorization",
-              "value": "Bearer YOUR_HH_API_BEARER_TOKEN"
+              "value": "Bearer APPLO0LMM7B8JG5P1D6Q3HMEIPTO6HADITJMTP3ENL0O98MFPSL4GTA6IRUQBVF0"
             }
           ]
         },
@@ -1220,7 +1220,7 @@
         "authentication": "serviceAccount",
         "documentId": {
           "__rl": true,
-          "value": "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit",
+          "value": "https://docs.google.com/spreadsheets/d/1rmM-J_XKOuGJAiaB2_McdfP0Wo_5w4NA6Xx3KXXuTq8/edit",
           "mode": "url"
         },
         "sheetName": {
@@ -1228,7 +1228,7 @@
           "value": 63430195,
           "mode": "list",
           "cachedResultName": "JobHunt_Rejected",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit#gid=63430195"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1rmM-J_XKOuGJAiaB2_McdfP0Wo_5w4NA6Xx3KXXuTq8/edit#gid=63430195"
         },
         "options": {}
       },
