@@ -164,6 +164,6 @@ def run_wizard():
 if __name__ == '__main__':
     try:
         run_wizard()
-    except KeyboardInterrupt:
-        print("\n\n[!] Операция отменена пользователем.")
+    except (KeyboardInterrupt, EOFError):
+        print("\n\n[!] Завершение работы мастера.")
         sys.exit(0)
