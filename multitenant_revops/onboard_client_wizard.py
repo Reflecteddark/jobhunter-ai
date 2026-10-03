@@ -33,6 +33,7 @@ from tenant_provisioner import (
     generate_tenant_id,
     extract_spreadsheet_id,
     copy_to_clipboard,
+    parse_email_list,
     GOLDEN_MASTER_ID
 )
 
@@ -79,12 +80,16 @@ def run_wizard():
             break
         print("    [!] Название компании не может быть пустым.")
 
-    # 2. Email директора / РОПа
+    # 2. Email директора / РОПа / сотрудников
     print("\n[ШАГ 2/4] ДОСТУП К АНАЛИТИКЕ REVOPS")
-    print("💡 На этот Email будут выданы права Редактора на персональный дашборд.")
-    client_email = input("👉 Email директора / РОПа (напр. director@company.ru): ").strip()
-    if client_email and '@' not in client_email:
-        print("    [!] Email указан некорректно, но мы продолжим (доступ можно выдать позже).")
+    print("💡 На указанные Email будут автоматически выданы права Редактора на персональный дашборд.")
+    print("💡 Можно указать 1 или несколько адресов через запятую (директор, РОП, аналитик):")
+    client_email = input("👉 Email сотрудников (напр. ceo@company.ru, rop@company.ru): ").strip()
+    parsed_emails = parse_email_list(client_email)
+    if parsed_emails:
+        print(f"    [✓] Распознано адресов: {len(parsed_emails)} ({', '.join(parsed_emails)})")
+    else:
+        print("    [!] Адреса не указаны, доступ можно будет выдать позже.")
 
     # 3. CRM система
     print("\n[ШАГ 3/4] ВЫБОР CRM СИСТЕМЫ КЛИЕНТА")

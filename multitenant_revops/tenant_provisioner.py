@@ -69,6 +69,24 @@ def generate_tenant_id(registry):
     count = len(registry.get('tenants', [])) + 1
     return f"TNT-{count:03d}"
 
+def parse_email_list(emails_input):
+    """Разбирает строку с email-адресами, разделёнными запятыми, точками с запятой или пробелами"""
+    if not emails_input:
+        return []
+    if isinstance(emails_input, (list, tuple)):
+        raw_list = emails_input
+    else:
+        raw_list = re.split(r'[,;\s]+', str(emails_input).strip())
+
+    valid_emails = []
+    seen = set()
+    for item in raw_list:
+        item = item.strip().lower()
+        if item and '@' in item and '.' in item and item not in seen:
+            valid_emails.append(item)
+            seen.add(item)
+    return valid_emails
+
 def extract_spreadsheet_id(input_str):
     if not input_str:
         return GOLDEN_MASTER_ID
@@ -122,6 +140,14 @@ def create_client_passport(tenant_record):
     filename = f"Паспорт_клиента_{tenant_record['tenant_id']}_{clean_name}.txt"
     filepath = os.path.join(desktop_dir, filename)
 
+    emails_list = tenant_record.get('client_emails') or [em.strip() for em in tenant_record.get('client_email', '').split(',') if em.strip()]
+    if len(emails_list) > 1:
+        emails_display = "\n" + "\n".join([f"                     • {em}" for em in emails_list])
+    elif emails_list:
+        emails_display = f" {emails_list[0]}"
+    else:
+        emails_display = " Не указан"
+
     content = f"""================================================================================
           📋 ПАСПОРТ КЛИЕНТСКОГО КОНТУРА — REVOPS PLATFORM V17.5
 ================================================================================
@@ -131,7 +157,7 @@ def create_client_passport(tenant_record):
 📅 Дата активации:   {tenant_record['created_at'][:19].replace('T', ' ')}
 🛡️ Статус защиты:    RBAC Hardware Lock (Активен)
 📊 Таблица отчётов:  {tenant_record['spreadsheet_url']}
-📧 Доступ выдан:     {tenant_record.get('client_email', 'Не указан')} (Права Редактора)
+📧 Доступ выдан:    {emails_display} (Права Редактора)
 
 --------------------------------------------------------------------------------
 🔌 ПАРАМЕТРЫ ИНТЕГРАЦИИ С CRM ({tenant_record.get('crm_type', 'bitrix24').upper()})
@@ -234,13 +260,15 @@ def provision_tenant(company_name, client_email=None, sheet_id=None, folder_id=N
     print(f"    [✓] Системные листы защищены от изменения клиентом")
 
     # 4. Предоставление доступа клиенту
-    print(f"[4/5] 💌 Выдача прав Редактора на Email...")
-    if client_email and '@' in client_email:
-        try:
-            new_sh.share(client_email, perm_type='user', role='writer', notify=True)
-            print(f"    [✓] Доступ Редактора выдан: {client_email}")
-        except Exception as e:
-            print(f"    [!] Заметка: не удалось выдать доступ через API ({e}). Добавьте {client_email} вручную.")
+    valid_emails = parse_email_list(client_email)
+    print(f"[4/5] 💌 Выдача прав Редактора на Email ({len(valid_emails)} адр.)...")
+    if valid_emails:
+        for em in valid_emails:
+            try:
+                new_sh.share(em, perm_type='user', role='writer', notify=True)
+                print(f"    [✓] Доступ Редактора выдан: {em}")
+            except Exception as e:
+                print(f"    [!] Заметка: не удалось выдать доступ {em} ({e}). Добавьте вручную.")
     else:
         print(f"    [-] Email не указан, пропускаем расшаривание")
 
@@ -254,7 +282,8 @@ def provision_tenant(company_name, client_email=None, sheet_id=None, folder_id=N
     tenant_record = {
         "tenant_id": tenant_id,
         "tenant_name": company_name,
-        "client_email": client_email or "",
+        "client_email": ", ".join(valid_emails) if valid_emails else (client_email or ""),
+        "client_emails": valid_emails,
         "crm_type": crm_type,
         "crm_webhook_url": crm_webhook or "",
         "amo_domain": amo_domain or "",
