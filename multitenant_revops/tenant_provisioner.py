@@ -33,7 +33,21 @@ if not os.path.exists(SERVICE_ACCOUNT_FILE):
 REGISTRY_FILE = os.path.join(BASE_DIR, 'tenants_registry.json')
 GOLDEN_MASTER_ID = '1QnjrrbpqhYssofchee7G06szWrFvBCcOqGIVokjqdVc'
 GOLDEN_MASTER_URL = f'https://docs.google.com/spreadsheets/d/{GOLDEN_MASTER_ID}/edit'
-N8N_BASE_URL = 'http://localhost:5678'
+
+def get_base_url():
+    try:
+        scratch_dir = r"C:\Users\strel\.gemini\antigravity\scratch"
+        if scratch_dir not in sys.path:
+            sys.path.insert(0, scratch_dir)
+        from tunnel_manager import get_active_tunnel_url
+        url = get_active_tunnel_url()
+        if url and url.startswith("http"):
+            return url.rstrip('/')
+    except:
+        pass
+    return 'http://localhost:5678'
+
+N8N_BASE_URL = get_base_url()
 
 def get_credentials():
     with open(SERVICE_ACCOUNT_FILE, 'r', encoding='utf-8') as f:
@@ -273,10 +287,11 @@ def provision_tenant(company_name, client_email=None, sheet_id=None, folder_id=N
         print(f"    [-] Email не указан, пропускаем расшаривание")
 
     # 5. Формирование Webhook URL
+    base_url = get_base_url()
     if crm_type == 'bitrix24':
-        inbound_webhook_url = f"{N8N_BASE_URL}/webhook/bitrix24-call?tenant={tenant_id}&sheet_id={clean_sheet_id}"
+        inbound_webhook_url = f"{base_url}/webhook/bitrix24-call?tenant={tenant_id}&sheet_id={clean_sheet_id}"
     else:
-        inbound_webhook_url = f"{N8N_BASE_URL}/webhook/amocrm-call?tenant={tenant_id}&sheet_id={clean_sheet_id}"
+        inbound_webhook_url = f"{base_url}/webhook/amocrm-call?tenant={tenant_id}&sheet_id={clean_sheet_id}"
 
     # 6. Регистрация в базе тенантов
     tenant_record = {
