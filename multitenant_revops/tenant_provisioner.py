@@ -152,6 +152,62 @@ def enforce_rbac_protection(sh, sa_email):
             return False
     return True
 
+def ensure_passport_sheet(sh, tenant_record):
+    """Создаёт титульный лист '📋 Паспорт_Клиента' прямо внутри таблицы Google"""
+    ws_name = "📋 Паспорт_Клиента"
+    try:
+        ws = sh.worksheet(ws_name)
+    except Exception:
+        try:
+            ws = sh.add_worksheet(title=ws_name, rows=35, cols=10, index=0)
+        except Exception:
+            return
+
+    crm_type = tenant_record.get('crm_type', 'amocrm')
+    if crm_type in ['hybrid', 'both']:
+        crm_display = "🔥 ГИБРИД (amoCRM + Битрикс24)"
+    elif crm_type == 'bitrix24':
+        crm_display = "БИТРИКС24"
+    else:
+        crm_display = "AMOCRM"
+
+    wh_amo = tenant_record.get('inbound_webhook_url', '')
+    wh_b24 = tenant_record.get('inbound_webhook_b24_url') or tenant_record.get('inbound_webhook_url', '')
+
+    passport_rows = [
+        ["📋 ПАСПОРТ КЛИЕНТСКОГО КОНТУРА REVOPS PLATFORM V18.0", ""],
+        ["Параметр", "Значение"],
+        ["🏢 Название компании", tenant_record['tenant_name']],
+        ["🔑 Идентификатор (Tenant ID)", tenant_record['tenant_id']],
+        ["📅 Дата активации", tenant_record['created_at'][:19].replace('T', ' ')],
+        ["🛡️ Статус защиты ядра", "RBAC Hardware Lock (Активен)"],
+        ["📧 Email клиента (Редактор)", tenant_record.get('client_email', 'Не указан')],
+        ["🔌 CRM Система", crm_display],
+        ["🌐 Домен amoCRM", tenant_record.get('amo_domain', 'Не указан')],
+        ["🔗 Webhook звонков amoCRM", wh_amo if crm_type != 'bitrix24' else "-"],
+        ["🔗 Webhook звонков Битрикс24", wh_b24 if crm_type != 'amocrm' else "-"],
+        ["", ""],
+        ["📌 ИНСТРУКЦИЯ ПО ПОДКЛЮЧЕНИЮ:", ""],
+        ["1. Вставьте соответствующий Webhook URL в настройки CRM или телефонии.", ""],
+        ["2. Каждый звонок автоматически анализируется нейросетью и заносится в эту таблицу.", ""]
+    ]
+    try:
+        ws.update(values=passport_rows, range_name="A1:B15")
+        ws.format("A1:B1", {
+            "backgroundColor": {"red": 0.05, "green": 0.45, "blue": 0.55},
+            "textFormat": {"foregroundColor": {"red": 1.0, "green": 1.0, "blue": 1.0}, "bold": True, "fontSize": 12}
+        })
+        ws.format("A2:B2", {
+            "backgroundColor": {"red": 0.12, "green": 0.16, "blue": 0.23},
+            "textFormat": {"foregroundColor": {"red": 1.0, "green": 1.0, "blue": 1.0}, "bold": True, "fontSize": 10}
+        })
+        ws.format("A3:A11", {
+            "textFormat": {"bold": True, "fontSize": 10}
+        })
+    except Exception:
+        pass
+
+
 def create_client_passport(tenant_record):
     desktop_dir = os.path.join(os.environ.get('USERPROFILE', r'C:\Users\strel'), 'Desktop')
     clients_base_dir = os.path.join(desktop_dir, 'RevOps Platform', 'Клиенты')
@@ -172,6 +228,17 @@ def create_client_passport(tenant_record):
     else:
         emails_display = " Не указан"
 
+    crm_type = tenant_record.get('crm_type', 'amocrm')
+    if crm_type in ['hybrid', 'both']:
+        crm_label = "🔥 ГИБРИД (amoCRM + Битрикс24 одновременно)"
+    elif crm_type == 'bitrix24':
+        crm_label = "БИТРИКС24 (Bitrix24)"
+    else:
+        crm_label = "amoCRM"
+
+    wh_amo = tenant_record.get('inbound_webhook_url', '')
+    wh_b24 = tenant_record.get('inbound_webhook_b24_url') or tenant_record.get('inbound_webhook_url', '')
+
     content = f"""================================================================================
           📋 ПАСПОРТ КЛИЕНТСКОГО КОНТУРА — REVOPS PLATFORM V18.0
 ================================================================================
@@ -184,20 +251,36 @@ def create_client_passport(tenant_record):
 📧 Доступ выдан:    {emails_display} (Права Редактора)
 
 --------------------------------------------------------------------------------
-🔌 ПАРАМЕТРЫ ИНТЕГРАЦИИ С CRM ({tenant_record.get('crm_type', 'bitrix24').upper()})
+🔌 ПАРАМЕТРЫ ИНТЕГРАЦИИ С CRM ({crm_label})
 --------------------------------------------------------------------------------
 """
 
-    if tenant_record.get('crm_type') == 'bitrix24':
+    if crm_type in ['hybrid', 'both']:
+        content += f"""ВНИМАНИЕ: Для клиента активирован ГИБРИДНЫЙ РЕЖИМ (amoCRM + Битрикс24)!
+Система одновременно принимает звонки и синхронизирует сделки из двух систем в единый дашборд.
+
+[1] НАСТРОЙКА AMOCRM:
+    • Домен:             {tenant_record.get('amo_domain', 'revopsofficial.amocrm.ru')}
+    • Входящий Webhook:  {wh_amo}
+    Инструкция: Вставьте Webhook URL в настройки телефонии amoCRM (UIS/Mango/Sipuni)
+    или в виджет интеграции. Задачи и примечания ставятся в amoCRM автоматически.
+
+[2] НАСТРОЙКА БИТРИКС24:
+    • REST Вебхук API:   {tenant_record.get('crm_webhook_url', 'Укажите в консоли')}
+    • Webhook звонков:   {wh_b24}
+    Инструкция: В Битрикс24: Разработчикам -> Исходящий вебхук -> URL обработчика.
+    Событие: ONVOXIMPLANTCALLEND. Комментарии и аудит добавляются в таймлайн сделки.
+"""
+    elif crm_type == 'bitrix24':
         content += f"""CRM Система:         Битрикс24 (REST API / Webhook)
 Входящий Webhook n8n (куда Битрикс24 шлёт звонки):
-👉 {tenant_record['inbound_webhook_url']}
+👉 {wh_b24}
 
 ИНСТРУКЦИЯ ПО ПОДКЛЮЧЕНИЮ В БИТРИКС24 (2 минуты):
 1. Откройте портал Битрикс24 клиента с правами администратора.
 2. Перейдите: Разработчикам -> Другое -> Исходящий вебхук.
 3. В поле "URL обработчика" вставьте:
-   {tenant_record['inbound_webhook_url']}
+   {wh_b24}
 4. В списке событий выберите:
    [✓] ONVOXIMPLANTCALLEND (Событие при завершении звонка)
 5. Нажмите "Сохранить".
@@ -208,12 +291,12 @@ Gemini 3.8 Flash, результат публикуется комментари
         content += f"""CRM Система:         amoCRM
 Домен amoCRM:        {tenant_record.get('amo_domain', 'Не указан')}
 Входящий Webhook n8n (для телефонии UIS/Mango/Sipuni/amoCRM):
-👉 {tenant_record['inbound_webhook_url']}
+👉 {wh_amo}
 
 ИНСТРУКЦИЯ ПО ПОДКЛЮЧЕНИЮ В AMOCRM:
 1. Перейдите в настройки телефонии (или виджета вебхуков amoCRM).
 2. Укажите URL обработчика звонков:
-   {tenant_record['inbound_webhook_url']}
+   {wh_amo}
 3. Сохраните настройки. Каждый звонок теперь оценивается по 13 критериям RevOps!
 """
 
@@ -257,7 +340,7 @@ Gemini 3.8 Flash, результат публикуется комментари
         rs.font.size = Pt(11)
         rs.font.color.rgb = RGBColor(100, 116, 139)
 
-        tbl = doc.add_table(rows=6, cols=2)
+        tbl = doc.add_table(rows=7, cols=2)
         tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
         tbl.style = 'Table Grid'
         t_data = [
@@ -266,6 +349,7 @@ Gemini 3.8 Flash, результат публикуется комментари
             ("Дата активации:", tenant_record['created_at'][:19].replace('T', ' ')),
             ("Статус защиты ядра:", "🛡️ RBAC Hardware Lock (Активен)"),
             ("Email доступа:", tenant_record.get('client_email', 'Не указан')),
+            ("CRM Режим:", crm_label),
             ("Google Таблица клиента:", tenant_record.get('spreadsheet_url', ''))
         ]
         for idx, (k, v) in enumerate(t_data):
@@ -300,11 +384,17 @@ Gemini 3.8 Flash, результат публикуется комментари
         c_box._tc.get_or_add_tcPr().append(parse_xml(f'<w:shd {nsdecls("w")} w:fill="EFF6FF"/>'))
         c_box._tc.get_or_add_tcPr().append(parse_xml(f'<w:tcBorders {nsdecls("w")}><w:left w:val="single" w:sz="24" w:space="0" w:color="2563EB"/><w:top w:val="none"/><w:right w:val="none"/><w:bottom w:val="none"/></w:tcBorders>'))
         pb = c_box.paragraphs[0]
-        rb1 = pb.add_run("Входящий Webhook n8n (куда CRM отправляет звонки):\n")
+        rb1 = pb.add_run("Входящие Webhook URL n8n:\n")
         rb1.bold = True
         rb1.font.size = Pt(10.5)
         rb1.font.color.rgb = RGBColor(30, 64, 175)
-        rb2 = pb.add_run(tenant_record.get('inbound_webhook_url', ''))
+
+        if crm_type in ['hybrid', 'both']:
+            rb2 = pb.add_run(f"• amoCRM Webhook:    {wh_amo}\n• Битрикс24 Webhook: {wh_b24}\n")
+        elif crm_type == 'bitrix24':
+            rb2 = pb.add_run(f"• Битрикс24 Webhook: {wh_b24}\n")
+        else:
+            rb2 = pb.add_run(f"• amoCRM Webhook:    {wh_amo}\n")
         rb2.font.size = Pt(9.5)
         rb2.font.color.rgb = RGBColor(3, 105, 161)
 
@@ -314,10 +404,10 @@ Gemini 3.8 Flash, результат публикуется комментари
 
     return (filepath_txt, filepath_docx)
 
-def provision_tenant(company_name, client_email=None, sheet_id=None, folder_id=None, crm_type="bitrix24", crm_webhook=None, amo_domain=None):
+
+def provision_tenant(company_name, client_email=None, sheet_id=None, folder_id=None, crm_type="amocrm", crm_webhook=None, amo_domain=None):
     creds = get_credentials()
     gc = gspread.authorize(creds)
-    drive_service = build('drive', 'v3', credentials=creds)
     with open(SERVICE_ACCOUNT_FILE, 'r', encoding='utf-8') as f:
         sa_email = json.load(f)['email']
 
@@ -326,7 +416,6 @@ def provision_tenant(company_name, client_email=None, sheet_id=None, folder_id=N
     clean_sheet_id = extract_spreadsheet_id(sheet_id)
 
     print(f"\n[1/5] 🔄 Подключение к Google Sheets...")
-    # 1. Открытие инстанса таблицы
     if clean_sheet_id and clean_sheet_id not in (CLEAN_TEMPLATE_ID, SHOWCASE_MASTER_ID):
         try:
             new_sh = gc.open_by_key(clean_sheet_id)
@@ -334,7 +423,7 @@ def provision_tenant(company_name, client_email=None, sheet_id=None, folder_id=N
             try:
                 new_sh.update_title(f"RevOps Platform V18.0 - {company_name}")
                 print(f"    [✓] Имя таблицы обновлено: 'RevOps Platform V18.0 - {company_name}'")
-            except Exception as e:
+            except Exception:
                 pass
         except Exception as e:
             print(f"    [-] Ошибка доступа к таблице {clean_sheet_id}: {e}")
@@ -342,7 +431,6 @@ def provision_tenant(company_name, client_email=None, sheet_id=None, folder_id=N
             print(f"    [i] Убедитесь, что выдали права 'Редактор' сервисному аккаунту!")
             return None
     else:
-        # Режим чистого клиентского шаблона (Client Starter)
         clean_sheet_id = CLEAN_TEMPLATE_ID
         new_sh = gc.open_by_key(clean_sheet_id)
         print(f"    [✓] Использован эталонный чистый шаблон (Client Starter): {clean_sheet_id}")
@@ -377,55 +465,12 @@ def provision_tenant(company_name, client_email=None, sheet_id=None, folder_id=N
     else:
         print(f"    [-] Email не указан, пропускаем расшаривание")
 
-    # 5. Формирование Webhook URL
+    # 5. Формирование Webhook URLs
     base_url = get_base_url()
-    if crm_type == 'bitrix24':
-        inbound_webhook_url = f"{base_url}/webhook/bitrix24-call?tenant={tenant_id}&sheet_id={clean_sheet_id}"
-    else:
-        inbound_webhook_url = f"{base_url}/webhook/amocrm-call?tenant={tenant_id}&sheet_id={clean_sheet_id}"
+    wh_amo = f"{base_url}/webhook/amocrm-call?tenant={tenant_id}&sheet_id={clean_sheet_id}"
+    wh_b24 = f"{base_url}/webhook/bitrix24-call?tenant={tenant_id}&sheet_id={clean_sheet_id}"
 
-def ensure_passport_sheet(sh, tenant_record):
-    """Создаёт титульный лист '📋 Паспорт_Клиента' прямо внутри таблицы Google"""
-    ws_name = "📋 Паспорт_Клиента"
-    try:
-        ws = sh.worksheet(ws_name)
-    except Exception:
-        try:
-            ws = sh.add_worksheet(title=ws_name, rows=30, cols=10, index=0)
-        except Exception:
-            return
-
-    passport_rows = [
-        ["📋 ПАСПОРТ КЛИЕНТСКОГО КОНТУРА REVOPS PLATFORM V18.0", ""],
-        ["Параметр", "Значение"],
-        ["🏢 Название компании", tenant_record['tenant_name']],
-        ["🔑 Идентификатор (Tenant ID)", tenant_record['tenant_id']],
-        ["📅 Дата активации", tenant_record['created_at'][:19].replace('T', ' ')],
-        ["🛡️ Статус защиты ядра", "RBAC Hardware Lock (Активен)"],
-        ["📧 Email клиента (Редактор)", tenant_record.get('client_email', 'Не указан')],
-        ["🔌 CRM Система", tenant_record.get('crm_type', 'amocrm').upper()],
-        ["🌐 Домен amoCRM / CRM", tenant_record.get('amo_domain', 'Не указан')],
-        ["🚀 Входящий Webhook n8n (Телефония/CRM)", tenant_record['inbound_webhook_url']],
-        ["", ""],
-        ["📌 ИНСТРУКЦИЯ ПО ПОДКЛЮЧЕНИЮ В CRM:", ""],
-        ["1. Вставьте Webhook URL в настройки телефонии (UIS/Mango/Sipuni) или виджет CRM.", ""],
-        ["2. Каждый звонок автоматически анализируется нейросетью и заносится в эту таблицу.", ""]
-    ]
-    try:
-        ws.update(values=passport_rows, range_name="A1:B14")
-        ws.format("A1:B1", {
-            "backgroundColor": {"red": 0.05, "green": 0.45, "blue": 0.55},
-            "textFormat": {"foregroundColor": {"red": 1.0, "green": 1.0, "blue": 1.0}, "bold": True, "fontSize": 12}
-        })
-        ws.format("A2:B2", {
-            "backgroundColor": {"red": 0.12, "green": 0.16, "blue": 0.23},
-            "textFormat": {"foregroundColor": {"red": 1.0, "green": 1.0, "blue": 1.0}, "bold": True, "fontSize": 10}
-        })
-        ws.format("A3:A10", {
-            "textFormat": {"bold": True, "fontSize": 10}
-        })
-    except Exception:
-        pass
+    primary_wh = wh_b24 if crm_type == 'bitrix24' else wh_amo
 
     # 6. Регистрация в базе тенантов
     tenant_record = {
@@ -435,13 +480,17 @@ def ensure_passport_sheet(sh, tenant_record):
         "client_emails": valid_emails,
         "crm_type": crm_type,
         "crm_webhook_url": crm_webhook or "",
+        "b24_webhook_url": crm_webhook or "",
         "amo_domain": amo_domain or "",
         "spreadsheet_id": clean_sheet_id,
         "spreadsheet_url": new_sh.url,
-        "inbound_webhook_url": inbound_webhook_url,
+        "inbound_webhook_url": primary_wh,
+        "inbound_webhook_amo_url": wh_amo,
+        "inbound_webhook_b24_url": wh_b24,
         "created_at": datetime.datetime.now().isoformat(),
         "status": "active",
-        "version": "18.0"
+        "version": "18.0",
+        "integration_mode": "token"
     }
     registry['tenants'].append(tenant_record)
     save_registry(registry)
@@ -467,13 +516,13 @@ def ensure_passport_sheet(sh, tenant_record):
             local_passport_path=passport_paths[0] if passport_paths else None,
             spreadsheet_id=clean_sheet_id
         )
-        if drive_res.get('status') == 'success':
+        if drive_res and drive_res.get('status') == 'success':
             print(f"    [✓] Синхронизировано на Google Drive: {drive_res.get('client_folder_url')}")
-    except Exception as e:
+    except Exception:
         pass
 
     # 9. Копирование вебхука в буфер обмена
-    copied = copy_to_clipboard(inbound_webhook_url)
+    copy_to_clipboard(primary_wh)
 
     print("\n" + "═"*70)
     print("🎉 КЛИЕНТ УСПЕШНО ОНБОРДИНГОВАН И ГОТОВ К РАБОТЕ!")
@@ -482,23 +531,28 @@ def ensure_passport_sheet(sh, tenant_record):
     print(f"🔑 Tenant ID:   {tenant_id}")
     print(f"📊 Дашборд:     {new_sh.url}")
     print(f"📁 Папка на ПК: C:\\Users\\strel\\Desktop\\RevOps Platform\\Клиенты\\{clean_name}\\")
-    print(f"🔌 CRM система: {crm_type.upper()}")
+    print(f"🔌 CRM режим:   {crm_type.upper()}")
     print("─"*70)
-    print("🚀 ВХОДЯЩИЙ ВЕБХУК ДЛЯ ЗВОНКОВ КЛИЕНТА:")
-    print(f"👉 {inbound_webhook_url}")
-    if copied:
-        print("📋 [URL АВТОМАТИЧЕСКИ СКОПИРОВАН В БУФЕР ОБМЕНА! (Ctrl+V)]")
+    if crm_type in ['hybrid', 'both']:
+        print("🚀 ВХОДЯЩИЕ ВЕБХУКИ ДЛЯ ЗВОНКОВ КЛИЕНТА (ГИБРИДНЫЙ РЕЖИМ):")
+        print(f"👉 amoCRM:    {wh_amo}")
+        print(f"👉 Битрикс24: {wh_b24}")
+    else:
+        print("🚀 ВХОДЯЩИЙ ВЕБХУК ДЛЯ ЗВОНКОВ КЛИЕНТА:")
+        print(f"👉 {primary_wh}")
+    print("📋 [URL АВТОМАТИЧЕСКИ СКОПИРОВАН В БУФЕР ОБМЕНА! (Ctrl+V)]")
     print("═"*70 + "\n")
 
     return tenant_record
 
+
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="RevOps Platform V17.5 Tenant Provisioner")
+    parser = argparse.ArgumentParser(description="RevOps Platform V18.0 Tenant Provisioner")
     parser.add_argument('--name', required=True, help="Название компании клиента")
     parser.add_argument('--email', help="Email клиента для выдачи доступа")
     parser.add_argument('--sheet-id', help="ID или ссылка на созданную таблицу Google")
     parser.add_argument('--folder-id', help="ID папки Google Drive")
-    parser.add_argument('--crm', choices=['bitrix24', 'amocrm'], default='bitrix24', help="Тип CRM")
+    parser.add_argument('--crm', choices=['bitrix24', 'amocrm', 'hybrid', 'both'], default='amocrm', help="Тип CRM")
     parser.add_argument('--crm-webhook', help="Входящий вебхук REST API Bitrix24")
     parser.add_argument('--amo-domain', help="Домен amoCRM")
     args = parser.parse_args()

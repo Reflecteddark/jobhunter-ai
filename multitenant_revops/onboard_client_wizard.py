@@ -95,22 +95,28 @@ def run_wizard():
 
     # 3. CRM система
     print("\n[ШАГ 3/4] ВЫБОР CRM СИСТЕМЫ КЛИЕНТА")
-    print("  [1] Битрикс24 (Bitrix24) — Входящий REST вебхук звонков")
-    print("  [2] amoCRM (АмоСРМ) — Интеграция телефонии / Webhook")
+    print("  [1] amoCRM (АмоСРМ) — Интеграция телефонии / Webhook / API Токен")
+    print("  [2] Битрикс24 (Bitrix24) — Входящий REST вебхук звонков")
+    print("  [3] 🔥 ОБЕ СИСТЕМЫ ОДНОВРЕМЕННО (Гибридный режим amoCRM + Битрикс24)")
     
-    crm_choice = input("👉 Выберите номер CRM [1 или 2, по умолчанию 1]: ").strip()
+    crm_choice = input("👉 Выберите номер CRM [1, 2 или 3, по умолчанию 1]: ").strip()
     if crm_choice == '2':
-        crm_type = 'amocrm'
-        print("\n  ⚙️ Настройка amoCRM:")
-        amo_domain = input("  👉 Домен или поддомен amoCRM (напр. client.amocrm.ru): ").strip()
-        crm_webhook = ""
-    else:
         crm_type = 'bitrix24'
         print("\n  ⚙️ Настройка Битрикс24:")
         print("  💡 Где взять в Битрикс24: Разработчикам -> Другое -> Входящий вебхук")
         print("     Права доступа: crm (Управление CRM)")
         crm_webhook = input("  👉 Входящий вебхук Битрикс24 (или Enter если настроите позже): ").strip()
         amo_domain = ""
+    elif crm_choice == '3':
+        crm_type = 'hybrid'
+        print("\n  ⚙️ Настройка ГИБРИДНОГО РЕЖИМА (amoCRM + Битрикс24):")
+        amo_domain = input("  👉 1. Домен amoCRM (напр. client.amocrm.ru, или Enter): ").strip()
+        crm_webhook = input("  👉 2. Входящий REST вебхук Битрикс24 (или Enter): ").strip()
+    else:
+        crm_type = 'amocrm'
+        print("\n  ⚙️ Настройка amoCRM:")
+        amo_domain = input("  👉 Домен или поддомен amoCRM (напр. client.amocrm.ru): ").strip()
+        crm_webhook = ""
 
     # 4. Google Таблица (Изолированный дашборд)
     print("\n[ШАГ 4/4] СОЗДАНИЕ ПЕРСОНАЛЬНОЙ GOOGLE ТАБЛИЦЫ")
