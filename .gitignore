@@ -29,3 +29,6 @@ archive_cold_storage/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+*tenants_registry.json
+multitenant_revops/tenants_registry.json
