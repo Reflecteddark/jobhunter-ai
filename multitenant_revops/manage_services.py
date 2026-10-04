@@ -20,7 +20,16 @@ N8N_PORT = 5678
 
 WHISPER_DIR = r"C:\Users\strel\.gemini\antigravity\scratch\transcriber_service"
 WHISPER_PYTHON = r"C:\Users\strel\.gemini\antigravity\scratch\game_vision_analytics\.venv\Scripts\python.exe"
-N8N_VBS = r"C:\Users\strel\.n8n\run_n8n_silent.vbs"
+N8N_HEADLESS = r"C:\Users\strel\.n8n\start_n8n_headless.ps1"
+
+def prevent_windows_sleep():
+    if os.name == 'nt':
+        try:
+            import ctypes
+            # ES_CONTINUOUS | ES_SYSTEM_REQUIRED
+            ctypes.windll.kernel32.SetThreadExecutionState(0x80000000 | 0x00000001)
+        except:
+            pass
 
 def is_port_open(port):
     try:
@@ -46,6 +55,7 @@ def check_n8n_health():
         return False
 
 def start_services():
+    prevent_windows_sleep()
     print("\n" + "═"*60)
     print("🚀 REVOPS ENTERPRISE OS — ЗАПУСК ФОНОВЫХ СЛУЖБ")
     print("═"*60 + "\n")
@@ -78,9 +88,9 @@ def start_services():
         print(f"  [✓] n8n Orchestrator уже работает на порту {N8N_PORT}")
     else:
         print(f"  [+] Запуск n8n Orchestrator (порт {N8N_PORT})...")
-        if os.path.exists(N8N_VBS):
-            subprocess.run(["wscript.exe", N8N_VBS], shell=True)
-            for _ in range(15):
+        if os.path.exists(N8N_HEADLESS):
+            subprocess.run(["powershell", "-ExecutionPolicy", "Bypass", "-File", N8N_HEADLESS], capture_output=True)
+            for _ in range(20):
                 time.sleep(1)
                 if check_n8n_health():
                     break
@@ -89,15 +99,36 @@ def start_services():
             else:
                 print(f"  [!] n8n инициализируется в фоне...")
         else:
-            print(f"  [-] Ошибка: файл запуска {N8N_VBS} не найден")
+            print(f"  [-] Ошибка: файл запуска {N8N_HEADLESS} не найден")
+
+    # 3. Secure Webhook Tunnel
+    try:
+        from tunnel_manager import start_tunnel, get_active_tunnel_url, is_cloudflared_running
+        if is_cloudflared_running():
+            print(f"  [✓] Защищённый HTTPS-туннель уже активен: {get_active_tunnel_url()}")
+        else:
+            print("  [+] Запуск защищённого HTTPS-туннеля (для amoCRM / Битрикс24)...")
+            tunnel_url = start_tunnel()
+            if tunnel_url:
+                print(f"  [✓] Защищённый HTTPS-туннель успешно поднят: {tunnel_url}")
+            else:
+                print("  [i] Локальный режим (без внешнего туннеля)")
+    except Exception as e:
+        print(f"  [!] Заметка по туннелю: {e}")
 
     print("\n" + "═"*60)
     print("✨ СТАТУС СИСТЕМЫ:")
     w_ok = "🟢 АКТИВЕН" if check_whisper_health() else "🟡 ЗАПУСКАЕТСЯ"
     n_ok = "🟢 АКТИВЕН" if check_n8n_health() else "🟡 ЗАПУСКАЕТСЯ"
+    try:
+        from tunnel_manager import get_active_tunnel_url
+        cf_url = get_active_tunnel_url()
+    except:
+        cf_url = "http://localhost:5678"
     print(f"  • Faster-Whisper (Речь -> Текст): {w_ok} (http://127.0.0.1:{WHISPER_PORT})")
     print(f"  • n8n Orchestrator (Вебхуки):    {n_ok} (http://127.0.0.1:{N8N_PORT})")
-    print(f"  • Gemini 3.8 Flash (Cloudflare): 🟢 ПОДКЛЮЧЕН")
+    print(f"  • Защищённый Webhook URL:        🌐 {cf_url}")
+    print(f"  • Gemini 2.5/Flash AI Аудит:     🟢 ПОДКЛЮЧЕН")
     print("═"*60 + "\n")
 
 def stop_services():
@@ -111,6 +142,14 @@ def stop_services():
         print("  [✓] Служба n8n (node.exe) остановлена")
     except Exception as e:
         print(f"  [!] Ошибка остановки n8n: {e}")
+
+    # Stop tunnel
+    try:
+        from tunnel_manager import stop_tunnel
+        stop_tunnel()
+        print("  [✓] Защищённый HTTPS-туннель остановлен")
+    except Exception as e:
+        pass
 
     # Stop uvicorn/python listening on port 8000
     try:

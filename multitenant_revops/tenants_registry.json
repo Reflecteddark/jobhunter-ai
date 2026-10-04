@@ -20,7 +20,7 @@
       "amo_domain": "https://revopsofficial.amocrm.ru",
       "spreadsheet_id": "1KoKhFJR_-ZYvRgeyFZGuHeadGigVJ_V2I3theOE4YRk",
       "spreadsheet_url": "https://docs.google.com/spreadsheets/d/1KoKhFJR_-ZYvRgeyFZGuHeadGigVJ_V2I3theOE4YRk",
-      "inbound_webhook_url": "https://bc9361abb25b94.lhr.life/webhook/amocrm-call?tenant=TNT-001&sheet_id=1KoKhFJR_-ZYvRgeyFZGuHeadGigVJ_V2I3theOE4YRk",
+      "inbound_webhook_url": "https://6248e2504a0f7a.lhr.life/webhook/amocrm-call?tenant=TNT-001&sheet_id=1KoKhFJR_-ZYvRgeyFZGuHeadGigVJ_V2I3theOE4YRk",
       "created_at": "2026-10-04T12:49:38.998634",
       "status": "active",
       "version": "18.0"

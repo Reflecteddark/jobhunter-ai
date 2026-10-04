@@ -96,6 +96,13 @@ def stop_tunnel():
 
 def run_daemon():
     """Фоновый авто-перезапускаемый процесс для удержания туннеля 24/7"""
+    if os.name == 'nt':
+        try:
+            import ctypes
+            ctypes.windll.kernel32.SetThreadExecutionState(0x80000000 | 0x00000001)
+        except:
+            pass
+
     with open(PID_FILE, 'w') as pf:
         pf.write(str(os.getpid()))
 
