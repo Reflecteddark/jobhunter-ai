@@ -116,6 +116,32 @@ def start_services():
     except Exception as e:
         print(f"  [!] Заметка по туннелю: {e}")
 
+    # 4. Background Deals Sync Daemon (Auto-Sync 24/7)
+    daemon_script = os.path.join(os.path.dirname(__file__), 'deals_sync_daemon.py')
+    pid_file = os.path.join(os.path.dirname(__file__), 'deals_sync_daemon.pid')
+    daemon_running = False
+    if os.path.exists(pid_file):
+        try:
+            with open(pid_file, 'r') as pf:
+                d_pid = int(pf.read().strip())
+            chk = subprocess.run(["tasklist", "/FI", f"PID eq {d_pid}"], capture_output=True, text=True)
+            if str(d_pid) in chk.stdout:
+                daemon_running = True
+        except:
+            pass
+
+    if daemon_running:
+        print("  [✓] Демон авто-синхронизации сделок amoCRM (24/7) уже работает")
+    else:
+        print("  [+] Запуск демона авто-синхронизации сделок (amoCRM ➔ raw_deals каждые 3 мин)...")
+        if os.path.exists(daemon_script):
+            py_exe = sys.executable
+            subprocess.Popen(
+                [py_exe, daemon_script],
+                creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+            )
+            print("  [✓] Демон синхронизации сделок успешно запущен!")
+
     print("\n" + "═"*60)
     print("✨ СТАТУС СИСТЕМЫ:")
     w_ok = "🟢 АКТИВЕН" if check_whisper_health() else "🟡 ЗАПУСКАЕТСЯ"
@@ -127,8 +153,9 @@ def start_services():
         cf_url = "http://localhost:5678"
     print(f"  • Faster-Whisper (Речь -> Текст): {w_ok} (http://127.0.0.1:{WHISPER_PORT})")
     print(f"  • n8n Orchestrator (Вебхуки):    {n_ok} (http://127.0.0.1:{N8N_PORT})")
+    print(f"  • Авто-синхронизация сделок:     🟢 24/7 (каждые 3 мин в raw_deals)")
     print(f"  • Защищённый Webhook URL:        🌐 {cf_url}")
-    print(f"  • Gemini 2.5/Flash AI Аудит:     🟢 ПОДКЛЮЧЕН")
+    print(f"  • Gemini 3.8 Flash AI Аудит:     🟢 ПОДКЛЮЧЕН")
     print("═"*60 + "\n")
 
 def stop_services():
@@ -150,6 +177,19 @@ def stop_services():
         print("  [✓] Защищённый HTTPS-туннель остановлен")
     except Exception as e:
         pass
+
+    # Stop Deals Sync Daemon
+    pid_file = os.path.join(os.path.dirname(__file__), 'deals_sync_daemon.pid')
+    if os.path.exists(pid_file):
+        try:
+            with open(pid_file, 'r') as pf:
+                d_pid = int(pf.read().strip())
+            subprocess.run(["taskkill", "/F", "/PID", str(d_pid)], capture_output=True)
+            print(f"  [✓] Демон авто-синхронизации сделок (PID {d_pid}) остановлен")
+        except:
+            pass
+        try: os.remove(pid_file)
+        except: pass
 
     # Stop uvicorn/python listening on port 8000
     try:
