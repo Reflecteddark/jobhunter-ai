@@ -34,11 +34,13 @@ from tenant_provisioner import (
     extract_spreadsheet_id,
     copy_to_clipboard,
     parse_email_list,
+    CLEAN_TEMPLATE_ID,
+    SHOWCASE_MASTER_ID,
     GOLDEN_MASTER_ID
 )
 
 SERVICE_ACCOUNT_EMAIL = "n8n-bot@n8n-sheets-508111.iam.gserviceaccount.com"
-TEMPLATE_COPY_URL = f"https://docs.google.com/spreadsheets/d/{GOLDEN_MASTER_ID}/copy"
+TEMPLATE_COPY_URL = f"https://docs.google.com/spreadsheets/d/{CLEAN_TEMPLATE_ID}/copy"
 
 def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
@@ -112,11 +114,11 @@ def run_wizard():
 
     # 4. Google Таблица (Изолированный дашборд)
     print("\n[ШАГ 4/4] СОЗДАНИЕ ПЕРСОНАЛЬНОЙ GOOGLE ТАБЛИЦЫ")
-    print("💡 Для клиента создаётся персональная копия дашборда RevOps V17.5.")
-    print(f"👉 Ссылка для создания копии в 1 клик:")
+    print("💡 Для клиента создаётся персональная ЧИСТАЯ копия дашборда RevOps V18.0 (Client Starter).")
+    print(f"👉 Ссылка для создания чистой копии в 1 клик:")
     print(f"   {TEMPLATE_COPY_URL}\n")
 
-    open_browser = input("🌐 Открыть ссылку для создания копии в браузере прямо сейчас? [Y/n]: ").strip().lower()
+    open_browser = input("🌐 Открыть ссылку на ЧИСТЫЙ шаблон в браузере прямо сейчас? [Y/n]: ").strip().lower()
     if open_browser in ['', 'y', 'yes', 'д', 'да']:
         print("    [+] Открываем Google Таблицы в браузере...")
         try:
@@ -127,7 +129,7 @@ def run_wizard():
     print("\n📌 В открывшемся окне нажмите синюю кнопку [Создать копию].")
     print(f"📌 В открывшейся копии нажмите [Настройки доступа] и предоставьте доступ:")
     print(f"   👉 {SERVICE_ACCOUNT_EMAIL} (права: Редактор)")
-    print("   (Если нажать Enter без ссылки — подключим демонстрационный контур Golden Master)\n")
+    print("   (Если нажать Enter без ссылки — подключим чистый шаблон RevOps Starter)\n")
 
     sheet_input = input("📋 Вставьте ссылку на созданную таблицу (или ID): ").strip()
     sheet_id = extract_spreadsheet_id(sheet_input)
@@ -161,10 +163,18 @@ def run_wizard():
         print("  1. В настройках телефонии / amoCRM указать скопированный URL обработчика звонков")
         print("  2. Сохранить настройки!")
 
-    print("\n✨ ВСЁ ГОТОВО! ПАСПОРТ КЛИЕНТА СОХРАНЁН НА ВАШЕМ РАБОЧЕМ СТОЛЕ.")
-    print("   Система уже анализирует разговоры через ИИ Faster-Whisper + Gemini 3.8 Flash.")
-    print("═" * 74 + "\n")
-    input("Нажмите Enter для завершения работы мастера онбординга...")
+    print("\n✨ ВСЁ ГОТОВО! ПАСПОРТ КЛИЕНТА СОХРАНЁН В ПАПКУ КЛИЕНТА НА ПК И НА GOOGLE ДИСКЕ.")
+    print("═" * 74)
+
+    # 5. Интерактивная проверка связки (CRM -> n8n -> Таблица)
+    print("\n[ШАГ 5/5] ПРОВЕРКА И ТЕСТИРОВАНИЕ СВЯЗКИ (CRM ➔ n8n ➔ GOOGLE ТАБЛИЦА)")
+    print("💡 Вы можете отправить тестовый звонок и сразу проверить появление строки в таблице клиента.")
+    run_test = input("🧪 Перейти к проверке и тестированию интеграции прямо сейчас? [Y/n]: ").strip().lower()
+    if run_test in ['', 'y', 'yes', 'д', 'да']:
+        from crm_integration_manager import manage_client_integration
+        manage_client_integration(tenant_record=record)
+    else:
+        input("\nНажмите Enter для завершения работы мастера онбординга...")
 
 if __name__ == '__main__':
     try:

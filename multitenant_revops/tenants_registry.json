@@ -1,11 +1,44 @@
 {
   "master_template": {
-    "tenant_id": "TNT-MASTER-001",
-    "tenant_name": "Golden Master Template",
+    "tenant_id": "TNT-CLEAN-001",
+    "tenant_name": "Clean Client Starter Template",
+    "spreadsheet_id": "1jBBotOfFh-XEJGScJyQi10jiFrna66OpJ91yPDrXy2A",
+    "spreadsheet_url": "https://docs.google.com/spreadsheets/d/1jBBotOfFh-XEJGScJyQi10jiFrna66OpJ91yPDrXy2A/edit",
+    "copy_url": "https://docs.google.com/spreadsheets/d/1jBBotOfFh-XEJGScJyQi10jiFrna66OpJ91yPDrXy2A/copy",
+    "version": "18.0"
+  },
+  "tenants": [
+    {
+      "tenant_id": "TNT-001",
+      "tenant_name": "Самозанятый",
+      "client_email": "dmitriyfedotov1908@gmail.com",
+      "client_emails": [
+        "dmitriyfedotov1908@gmail.com"
+      ],
+      "crm_type": "amocrm",
+      "crm_webhook_url": "",
+      "amo_domain": "https://revopsofficial.amocrm.ru",
+      "spreadsheet_id": "1KoKhFJR_-ZYvRgeyFZGuHeadGigVJ_V2I3theOE4YRk",
+      "spreadsheet_url": "https://docs.google.com/spreadsheets/d/1KoKhFJR_-ZYvRgeyFZGuHeadGigVJ_V2I3theOE4YRk",
+      "inbound_webhook_url": "https://86c8ce0ada08c3.lhr.life/webhook/amocrm-call?tenant=TNT-001&sheet_id=1KoKhFJR_-ZYvRgeyFZGuHeadGigVJ_V2I3theOE4YRk",
+      "created_at": "2026-10-04T12:49:38.998634",
+      "status": "active",
+      "version": "18.0"
+    }
+  ],
+  "showcase_template": {
+    "tenant_id": "TNT-SHOWCASE-001",
+    "tenant_name": "Showcase Master (Demo with 1.65M Deals)",
     "spreadsheet_id": "1QnjrrbpqhYssofchee7G06szWrFvBCcOqGIVokjqdVc",
     "spreadsheet_url": "https://docs.google.com/spreadsheets/d/1QnjrrbpqhYssofchee7G06szWrFvBCcOqGIVokjqdVc/edit",
-    "version": "17.5",
-    "created_at": "2026-09-29T20:30:00"
+    "version": "18.0"
   },
-  "tenants": []
+  "clean_starter_template": {
+    "tenant_id": "TNT-CLEAN-001",
+    "tenant_name": "Clean Client Starter Template",
+    "spreadsheet_id": "1jBBotOfFh-XEJGScJyQi10jiFrna66OpJ91yPDrXy2A",
+    "spreadsheet_url": "https://docs.google.com/spreadsheets/d/1jBBotOfFh-XEJGScJyQi10jiFrna66OpJ91yPDrXy2A/edit",
+    "copy_url": "https://docs.google.com/spreadsheets/d/1jBBotOfFh-XEJGScJyQi10jiFrna66OpJ91yPDrXy2A/copy",
+    "version": "18.0"
+  }
 }

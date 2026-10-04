@@ -31,7 +31,11 @@ if not os.path.exists(SERVICE_ACCOUNT_FILE):
     SERVICE_ACCOUNT_FILE = os.path.join(r'C:\Users\strel\.gemini\antigravity\scratch', 'service_account.json')
 
 REGISTRY_FILE = os.path.join(BASE_DIR, 'tenants_registry.json')
-GOLDEN_MASTER_ID = '1QnjrrbpqhYssofchee7G06szWrFvBCcOqGIVokjqdVc'
+SHOWCASE_MASTER_ID = '1QnjrrbpqhYssofchee7G06szWrFvBCcOqGIVokjqdVc'
+CLEAN_TEMPLATE_ID = '1jBBotOfFh-XEJGScJyQi10jiFrna66OpJ91yPDrXy2A'
+
+# Для создания персональных клиентских дашбордов используется ЧИСТЫЙ шаблон (Clean Starter)
+GOLDEN_MASTER_ID = CLEAN_TEMPLATE_ID
 GOLDEN_MASTER_URL = f'https://docs.google.com/spreadsheets/d/{GOLDEN_MASTER_ID}/edit'
 
 def get_base_url():
@@ -150,9 +154,15 @@ def enforce_rbac_protection(sh, sa_email):
 
 def create_client_passport(tenant_record):
     desktop_dir = os.path.join(os.environ.get('USERPROFILE', r'C:\Users\strel'), 'Desktop')
+    clients_base_dir = os.path.join(desktop_dir, 'RevOps Platform', 'Клиенты')
     clean_name = re.sub(r'[\/:*?"<>|]', '_', tenant_record['tenant_name'])
-    filename = f"Паспорт_клиента_{tenant_record['tenant_id']}_{clean_name}.txt"
-    filepath = os.path.join(desktop_dir, filename)
+    client_folder = os.path.join(clients_base_dir, clean_name)
+    os.makedirs(client_folder, exist_ok=True)
+
+    filename_txt = f"Паспорт_клиента_{tenant_record['tenant_id']}_{clean_name}.txt"
+    filepath_txt = os.path.join(client_folder, filename_txt)
+    filename_docx = f"Паспорт_клиента_{tenant_record['tenant_id']}_{clean_name}.docx"
+    filepath_docx = os.path.join(client_folder, filename_docx)
 
     emails_list = tenant_record.get('client_emails') or [em.strip() for em in tenant_record.get('client_email', '').split(',') if em.strip()]
     if len(emails_list) > 1:
@@ -163,7 +173,7 @@ def create_client_passport(tenant_record):
         emails_display = " Не указан"
 
     content = f"""================================================================================
-          📋 ПАСПОРТ КЛИЕНТСКОГО КОНТУРА — REVOPS PLATFORM V17.5
+          📋 ПАСПОРТ КЛИЕНТСКОГО КОНТУРА — REVOPS PLATFORM V18.0
 ================================================================================
 
 🏢 Компания:         {tenant_record['tenant_name']}
@@ -212,16 +222,97 @@ Gemini 3.8 Flash, результат публикуется комментари
 💡 СЛУЖБА ПОДДЕРЖКИ REVOPS ENTERPRISE:
 Локальный контур n8n: {N8N_BASE_URL}
 Реестр тенантов:      {REGISTRY_FILE}
+Папка на компьютере:  {client_folder}
 ================================================================================
 """
 
     try:
-        with open(filepath, 'w', encoding='utf-8-sig') as f:
+        with open(filepath_txt, 'w', encoding='utf-8-sig') as f:
             f.write(content)
-        return filepath
     except Exception as e:
-        print(f"    [!] Не удалось сохранить файл паспорта на Рабочий стол: {e}")
-        return None
+        print(f"    [!] Не удалось сохранить текстовый паспорт: {e}")
+
+    try:
+        import docx
+        from docx.shared import Inches, Pt, RGBColor
+        from docx.enum.table import WD_TABLE_ALIGNMENT
+        from docx.oxml import parse_xml
+        from docx.oxml.ns import nsdecls
+
+        doc = docx.Document()
+        for sec in doc.sections:
+            sec.top_margin = Inches(0.8)
+            sec.bottom_margin = Inches(0.8)
+            sec.left_margin = Inches(0.8)
+            sec.right_margin = Inches(0.8)
+
+        p_t = doc.add_paragraph()
+        rt = p_t.add_run("📋 ПАСПОРТ КЛИЕНТСКОГО КОНТУРА")
+        rt.bold = True
+        rt.font.size = Pt(18)
+        rt.font.color.rgb = RGBColor(14, 116, 144)
+
+        ps = doc.add_paragraph()
+        rs = ps.add_run(f"RevOps Enterprise OS V18.0 — {tenant_record['tenant_name']} ({tenant_record['tenant_id']})")
+        rs.font.size = Pt(11)
+        rs.font.color.rgb = RGBColor(100, 116, 139)
+
+        tbl = doc.add_table(rows=6, cols=2)
+        tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
+        tbl.style = 'Table Grid'
+        t_data = [
+            ("Компания:", tenant_record['tenant_name']),
+            ("Идентификатор (Tenant ID):", tenant_record['tenant_id']),
+            ("Дата активации:", tenant_record['created_at'][:19].replace('T', ' ')),
+            ("Статус защиты ядра:", "🛡️ RBAC Hardware Lock (Активен)"),
+            ("Email доступа:", tenant_record.get('client_email', 'Не указан')),
+            ("Google Таблица клиента:", tenant_record.get('spreadsheet_url', ''))
+        ]
+        for idx, (k, v) in enumerate(t_data):
+            c1, c2 = tbl.cell(idx, 0), tbl.cell(idx, 1)
+            c1.width = Inches(2.2)
+            c2.width = Inches(4.5)
+            shd = parse_xml(f'<w:shd {nsdecls("w")} w:fill="F8FAFC"/>')
+            c1._tc.get_or_add_tcPr().append(shd)
+            p1 = c1.paragraphs[0]
+            p1.paragraph_format.space_before = Pt(4)
+            p1.paragraph_format.space_after = Pt(4)
+            r1 = p1.add_run(k)
+            r1.bold = True
+            r1.font.size = Pt(10)
+            r1.font.color.rgb = RGBColor(51, 65, 85)
+            p2 = c2.paragraphs[0]
+            p2.paragraph_format.space_before = Pt(4)
+            p2.paragraph_format.space_after = Pt(4)
+            r2 = p2.add_run(v)
+            r2.font.size = Pt(10)
+            if idx == 1:
+                r2.bold = True
+                r2.font.color.rgb = RGBColor(3, 105, 161)
+
+        h2 = doc.add_paragraph()
+        rh2 = h2.add_run("\n🔌 ПАРАМЕТРЫ ИНТЕГРАЦИИ С CRM")
+        rh2.bold = True
+        rh2.font.size = Pt(13)
+
+        c_box = doc.add_table(rows=1, cols=1).cell(0, 0)
+        c_box.width = Inches(6.7)
+        c_box._tc.get_or_add_tcPr().append(parse_xml(f'<w:shd {nsdecls("w")} w:fill="EFF6FF"/>'))
+        c_box._tc.get_or_add_tcPr().append(parse_xml(f'<w:tcBorders {nsdecls("w")}><w:left w:val="single" w:sz="24" w:space="0" w:color="2563EB"/><w:top w:val="none"/><w:right w:val="none"/><w:bottom w:val="none"/></w:tcBorders>'))
+        pb = c_box.paragraphs[0]
+        rb1 = pb.add_run("Входящий Webhook n8n (куда CRM отправляет звонки):\n")
+        rb1.bold = True
+        rb1.font.size = Pt(10.5)
+        rb1.font.color.rgb = RGBColor(30, 64, 175)
+        rb2 = pb.add_run(tenant_record.get('inbound_webhook_url', ''))
+        rb2.font.size = Pt(9.5)
+        rb2.font.color.rgb = RGBColor(3, 105, 161)
+
+        doc.save(filepath_docx)
+    except Exception as e:
+        print(f"    [!] Не удалось сохранить Word паспорт: {e}")
+
+    return (filepath_txt, filepath_docx)
 
 def provision_tenant(company_name, client_email=None, sheet_id=None, folder_id=None, crm_type="bitrix24", crm_webhook=None, amo_domain=None):
     creds = get_credentials()
@@ -236,13 +327,13 @@ def provision_tenant(company_name, client_email=None, sheet_id=None, folder_id=N
 
     print(f"\n[1/5] 🔄 Подключение к Google Sheets...")
     # 1. Открытие инстанса таблицы
-    if clean_sheet_id and clean_sheet_id != GOLDEN_MASTER_ID:
+    if clean_sheet_id and clean_sheet_id not in (CLEAN_TEMPLATE_ID, SHOWCASE_MASTER_ID):
         try:
             new_sh = gc.open_by_key(clean_sheet_id)
             print(f"    [✓] Подключена персональная таблица клиента: {new_sh.title}")
             try:
-                new_sh.update_title(f"RevOps Platform V17.5 - {company_name}")
-                print(f"    [✓] Имя таблицы обновлено: 'RevOps Platform V17.5 - {company_name}'")
+                new_sh.update_title(f"RevOps Platform V18.0 - {company_name}")
+                print(f"    [✓] Имя таблицы обновлено: 'RevOps Platform V18.0 - {company_name}'")
             except Exception as e:
                 pass
         except Exception as e:
@@ -251,10 +342,10 @@ def provision_tenant(company_name, client_email=None, sheet_id=None, folder_id=N
             print(f"    [i] Убедитесь, что выдали права 'Редактор' сервисному аккаунту!")
             return None
     else:
-        # Режим Golden Master (Showcase / Demo)
-        clean_sheet_id = GOLDEN_MASTER_ID
+        # Режим чистого клиентского шаблона (Client Starter)
+        clean_sheet_id = CLEAN_TEMPLATE_ID
         new_sh = gc.open_by_key(clean_sheet_id)
-        print(f"    [✓] Использован Golden Master контур: {clean_sheet_id}")
+        print(f"    [✓] Использован эталонный чистый шаблон (Client Starter): {clean_sheet_id}")
 
     # 2. Инициализация параметров тенанта
     print(f"[2/5] ⚙️ Настройка конфигураций тенанта ({tenant_id})...")
@@ -293,6 +384,49 @@ def provision_tenant(company_name, client_email=None, sheet_id=None, folder_id=N
     else:
         inbound_webhook_url = f"{base_url}/webhook/amocrm-call?tenant={tenant_id}&sheet_id={clean_sheet_id}"
 
+def ensure_passport_sheet(sh, tenant_record):
+    """Создаёт титульный лист '📋 Паспорт_Клиента' прямо внутри таблицы Google"""
+    ws_name = "📋 Паспорт_Клиента"
+    try:
+        ws = sh.worksheet(ws_name)
+    except Exception:
+        try:
+            ws = sh.add_worksheet(title=ws_name, rows=30, cols=10, index=0)
+        except Exception:
+            return
+
+    passport_rows = [
+        ["📋 ПАСПОРТ КЛИЕНТСКОГО КОНТУРА REVOPS PLATFORM V18.0", ""],
+        ["Параметр", "Значение"],
+        ["🏢 Название компании", tenant_record['tenant_name']],
+        ["🔑 Идентификатор (Tenant ID)", tenant_record['tenant_id']],
+        ["📅 Дата активации", tenant_record['created_at'][:19].replace('T', ' ')],
+        ["🛡️ Статус защиты ядра", "RBAC Hardware Lock (Активен)"],
+        ["📧 Email клиента (Редактор)", tenant_record.get('client_email', 'Не указан')],
+        ["🔌 CRM Система", tenant_record.get('crm_type', 'amocrm').upper()],
+        ["🌐 Домен amoCRM / CRM", tenant_record.get('amo_domain', 'Не указан')],
+        ["🚀 Входящий Webhook n8n (Телефония/CRM)", tenant_record['inbound_webhook_url']],
+        ["", ""],
+        ["📌 ИНСТРУКЦИЯ ПО ПОДКЛЮЧЕНИЮ В CRM:", ""],
+        ["1. Вставьте Webhook URL в настройки телефонии (UIS/Mango/Sipuni) или виджет CRM.", ""],
+        ["2. Каждый звонок автоматически анализируется нейросетью и заносится в эту таблицу.", ""]
+    ]
+    try:
+        ws.update(values=passport_rows, range_name="A1:B14")
+        ws.format("A1:B1", {
+            "backgroundColor": {"red": 0.05, "green": 0.45, "blue": 0.55},
+            "textFormat": {"foregroundColor": {"red": 1.0, "green": 1.0, "blue": 1.0}, "bold": True, "fontSize": 12}
+        })
+        ws.format("A2:B2", {
+            "backgroundColor": {"red": 0.12, "green": 0.16, "blue": 0.23},
+            "textFormat": {"foregroundColor": {"red": 1.0, "green": 1.0, "blue": 1.0}, "bold": True, "fontSize": 10}
+        })
+        ws.format("A3:A10", {
+            "textFormat": {"bold": True, "fontSize": 10}
+        })
+    except Exception:
+        pass
+
     # 6. Регистрация в базе тенантов
     tenant_record = {
         "tenant_id": tenant_id,
@@ -307,18 +441,38 @@ def provision_tenant(company_name, client_email=None, sheet_id=None, folder_id=N
         "inbound_webhook_url": inbound_webhook_url,
         "created_at": datetime.datetime.now().isoformat(),
         "status": "active",
-        "version": "17.5"
+        "version": "18.0"
     }
     registry['tenants'].append(tenant_record)
     save_registry(registry)
     print(f"[5/5] 💾 Клиент зарегистрирован в базе tenants_registry.json")
 
-    # 7. Паспорт клиента на Рабочий стол
-    passport_path = create_client_passport(tenant_record)
-    if passport_path:
-        print(f"    [✓] Паспорт клиента сохранён на Рабочем столе: {os.path.basename(passport_path)}")
+    # Встраивание паспорта прямо в Google Таблицу
+    ensure_passport_sheet(new_sh, tenant_record)
 
-    # 8. Копирование вебхука в буфер обмена
+    # 7. Паспорт клиента в персональную папку клиента
+    clean_name = re.sub(r'[\/:*?"<>|]', '_', tenant_record['tenant_name'])
+    passport_paths = create_client_passport(tenant_record)
+    if passport_paths:
+        print(f"    [✓] Паспорт сохранён в папку клиента: 'RevOps Platform\\Клиенты\\{clean_name}\\'")
+        print(f"        • Текстовый паспорт: {os.path.basename(passport_paths[0])}")
+        print(f"        • Документ Word:     {os.path.basename(passport_paths[1])}")
+
+    # 8. Синхронизация на Google Drive
+    try:
+        from google_drive_manager import sync_client_to_drive
+        drive_res = sync_client_to_drive(
+            tenant_name=company_name,
+            tenant_id=tenant_id,
+            local_passport_path=passport_paths[0] if passport_paths else None,
+            spreadsheet_id=clean_sheet_id
+        )
+        if drive_res.get('status') == 'success':
+            print(f"    [✓] Синхронизировано на Google Drive: {drive_res.get('client_folder_url')}")
+    except Exception as e:
+        pass
+
+    # 9. Копирование вебхука в буфер обмена
     copied = copy_to_clipboard(inbound_webhook_url)
 
     print("\n" + "═"*70)
@@ -327,6 +481,7 @@ def provision_tenant(company_name, client_email=None, sheet_id=None, folder_id=N
     print(f"🏢 Компания:    {company_name}")
     print(f"🔑 Tenant ID:   {tenant_id}")
     print(f"📊 Дашборд:     {new_sh.url}")
+    print(f"📁 Папка на ПК: C:\\Users\\strel\\Desktop\\RevOps Platform\\Клиенты\\{clean_name}\\")
     print(f"🔌 CRM система: {crm_type.upper()}")
     print("─"*70)
     print("🚀 ВХОДЯЩИЙ ВЕБХУК ДЛЯ ЗВОНКОВ КЛИЕНТА:")
