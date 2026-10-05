@@ -42,7 +42,7 @@ def get_base_url():
     try:
         scratch_dir = r"C:\Users\strel\.gemini\antigravity\scratch"
         if scratch_dir not in sys.path:
-            sys.path.insert(0, scratch_dir)
+            sys.path.append(scratch_dir)
         from tunnel_manager import get_active_tunnel_url
         url = get_active_tunnel_url()
         if url and url.startswith("http"):
@@ -412,7 +412,7 @@ Gemini 3.8 Flash, результат публикуется комментари
 
 
 def provision_tenant(company_name, client_email=None, sheet_id=None, folder_id=None, crm_type="amocrm", crm_webhook=None, amo_domain=None,
-                     niche_id="general_b2b", niche_name="Универсальный B2B", avg_deal_check=150000, target_next_step=None, main_objection=None, max_audit_calls=200):
+                     amo_token=None, niche_id="general_b2b", niche_name="Универсальный B2B", avg_deal_check=150000, target_next_step=None, main_objection=None, max_audit_calls=200):
     creds = get_credentials()
     gc = gspread.authorize(creds)
     with open(SERVICE_ACCOUNT_FILE, 'r', encoding='utf-8') as f:
@@ -438,9 +438,18 @@ def provision_tenant(company_name, client_email=None, sheet_id=None, folder_id=N
             print(f"    [i] Убедитесь, что выдали права 'Редактор' сервисному аккаунту!")
             return None
     else:
-        clean_sheet_id = CLEAN_TEMPLATE_ID
-        new_sh = gc.open_by_key(clean_sheet_id)
-        print(f"    [✓] Использован эталонный чистый шаблон (Client Starter): {clean_sheet_id}")
+        print(f"    [+] Клонирование чистого шаблона для '{company_name}' через Drive API...")
+        try:
+            drive_svc = build('drive', 'v3', credentials=creds)
+            copy_meta = {'name': f"RevOps Platform V18.0 - {company_name}"}
+            copied_file = drive_svc.files().copy(fileId=CLEAN_TEMPLATE_ID, body=copy_meta, supportsAllDrives=True).execute()
+            clean_sheet_id = copied_file['id']
+            new_sh = gc.open_by_key(clean_sheet_id)
+            print(f"    [✓] Создана независимая копия шаблона: {clean_sheet_id}")
+        except Exception as e:
+            print(f"    [-] Автокопирование не удалось ({e}), подключен шаблон по умолчанию: {CLEAN_TEMPLATE_ID}")
+            clean_sheet_id = CLEAN_TEMPLATE_ID
+            new_sh = gc.open_by_key(clean_sheet_id)
 
     # 2. Инициализация параметров тенанта
     print(f"[2/5] ⚙️ Настройка конфигураций тенанта ({tenant_id})...")
@@ -450,6 +459,10 @@ def provision_tenant(company_name, client_email=None, sheet_id=None, folder_id=N
         ws_settings.update(values=[[tenant_id]], range_name='E3')
         ws_settings.update(values=[[company_name]], range_name='E4')
         ws_settings.update(values=[["🛡️ Hardware Enforcement (Active)"]], range_name='E5')
+        if client_email:
+            first_em = client_email.split(',')[0].strip()
+            if first_em:
+                ws_settings.update(values=[[first_em, '👑 CEO', '📄 Executive_OnePager']], range_name='J10:L10')
         print(f"    [✓] Лист '⚙️ Настройки' успешно обновлён")
     except Exception as e:
         print(f"    [!] Не удалось обновить '⚙️ Настройки': {e}")
@@ -495,6 +508,7 @@ def provision_tenant(company_name, client_email=None, sheet_id=None, folder_id=N
         "crm_webhook_url": crm_webhook or "",
         "b24_webhook_url": crm_webhook or "",
         "amo_domain": amo_domain or "",
+        "amo_token": amo_token or "",
         "spreadsheet_id": clean_sheet_id,
         "spreadsheet_url": new_sh.url,
         "inbound_webhook_url": primary_wh,

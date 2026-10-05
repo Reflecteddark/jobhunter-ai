@@ -163,10 +163,20 @@ def stop_services():
     print("🛑 REVOPS ENTERPRISE OS — ОСТАНОВКА СЛУЖБ")
     print("═"*60 + "\n")
 
-    # Stop node (n8n)
+    # Stop n8n (only the PID listening on port 5678)
     try:
-        subprocess.run(["taskkill", "/F", "/IM", "node.exe"], capture_output=True, text=True)
-        print("  [✓] Служба n8n (node.exe) остановлена")
+        netstat = subprocess.run(["netstat", "-ano"], capture_output=True, text=True).stdout
+        pids = set()
+        for line in netstat.splitlines():
+            if f":{N8N_PORT} " in line and "LISTENING" in line:
+                parts = line.strip().split()
+                if parts:
+                    pids.add(parts[-1])
+        for pid in pids:
+            subprocess.run(["taskkill", "/F", "/PID", pid], capture_output=True)
+            print(f"  [✓] Служба n8n Orchestrator (PID {pid}) остановлена")
+        if not pids:
+            print("  [i] n8n Orchestrator не был запущен")
     except Exception as e:
         print(f"  [!] Ошибка остановки n8n: {e}")
 

@@ -1,6 +1,6 @@
 """
 RevOps Enterprise OS V18.0 - Background Deals Synchronization Daemon (Auto-Sync 24/7)
-Автоматическая фоновая синхронизация сделок и воронки из amoCRM в Google Таблицу (raw_deals) каждые 5 минут.
+Автоматическая фоновая синхронизация сделок и воронки из amoCRM в Google Таблицу (raw_deals) каждые 3 минуты.
 """
 import os
 import sys
@@ -19,14 +19,32 @@ if sys.stdout.encoding != 'utf-8':
         pass
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-SERVICE_ACCOUNT_FILE = os.path.join(BASE_DIR, 'service_account.json')
 PID_FILE = os.path.join(BASE_DIR, 'deals_sync_daemon.pid')
 LOG_FILE = os.path.join(BASE_DIR, 'deals_sync.log')
 
-REGISTRY_PATHS = [
-    os.path.join(BASE_DIR, 'revops-enterprise-os', 'multitenant_revops', 'tenants_registry.json'),
-    os.path.join(BASE_DIR, 'jobhunter-ai', 'multitenant_revops', 'tenants_registry.json')
-]
+def find_service_account():
+    candidates = [
+        os.path.join(BASE_DIR, 'service_account.json'),
+        os.path.join(BASE_DIR, '..', 'service_account.json'),
+        os.path.join(BASE_DIR, '..', '..', 'service_account.json'),
+        r"C:\Users\strel\.gemini\antigravity\scratch\service_account.json"
+    ]
+    for c in candidates:
+        if os.path.exists(c):
+            return c
+    return None
+
+def find_registry_file():
+    candidates = [
+        os.path.join(BASE_DIR, 'tenants_registry.json'),
+        os.path.join(BASE_DIR, '..', 'multitenant_revops', 'tenants_registry.json'),
+        r"C:\Users\strel\.gemini\antigravity\scratch\revops-enterprise-os\multitenant_revops\tenants_registry.json",
+        r"C:\Users\strel\.gemini\antigravity\scratch\jobhunter-ai\multitenant_revops\tenants_registry.json"
+    ]
+    for c in candidates:
+        if os.path.exists(c):
+            return c
+    return None
 
 def prevent_windows_sleep():
     if os.name == 'nt':
@@ -36,8 +54,16 @@ def prevent_windows_sleep():
         except:
             pass
 
+def sanitize_sheet_val(val):
+    if isinstance(val, str) and val and val[0] in ('=', '+', '-', '@', '\t', '\r'):
+        return "'" + val
+    return val
+
 def get_gspread_client():
-    with open(SERVICE_ACCOUNT_FILE, 'r', encoding='utf-8') as f:
+    sa_path = find_service_account()
+    if not sa_path:
+        raise FileNotFoundError("service_account.json не найден ни в одном из доверенных путей")
+    with open(sa_path, 'r', encoding='utf-8') as f:
         sa = json.load(f)
     creds = Credentials.from_service_account_info({
         'type': 'service_account',
@@ -70,18 +96,34 @@ def sync_tenant_deals(tenant, gc):
     if not domain.endswith('.amocrm.ru'):
         domain = f"{domain}.amocrm.ru"
 
+    ctx = ssl.create_default_context()
+
     # 1. Fetch Pipelines & Stages
     pipelines_url = f"https://{domain}/api/v4/leads/pipelines"
     req = urllib.request.Request(pipelines_url, headers={"Authorization": f"Bearer {token.strip()}"})
-    ctx = ssl.create_default_context()
     stages_map = {}
-    with urllib.request.urlopen(req, timeout=10, context=ctx) as resp:
-        p_data = json.loads(resp.read().decode('utf-8'))
-        for p in p_data.get('_embedded', {}).get('pipelines', []):
-            for s in p.get('_embedded', {}).get('statuses', []):
-                stages_map[s['id']] = s['name']
+    try:
+        with urllib.request.urlopen(req, timeout=10, context=ctx) as resp:
+            p_data = json.loads(resp.read().decode('utf-8'))
+            for p in p_data.get('_embedded', {}).get('pipelines', []):
+                for s in p.get('_embedded', {}).get('statuses', []):
+                    stages_map[s['id']] = s['name']
+    except Exception as e:
+        log(f"[{tenant_id}] Ошибка загрузки воронки: {e}")
+        return
 
-    # 2. Fetch Contacts Map
+    # 2. Fetch Users & Contacts Map
+    users_map = {}
+    try:
+        u_url = f"https://{domain}/api/v4/users"
+        u_req = urllib.request.Request(u_url, headers={"Authorization": f"Bearer {token.strip()}"})
+        with urllib.request.urlopen(u_req, timeout=10, context=ctx) as resp:
+            u_data = json.loads(resp.read().decode('utf-8'))
+            for u in u_data.get('_embedded', {}).get('users', []):
+                users_map[str(u['id'])] = u.get('name', 'Менеджер')
+    except:
+        pass
+
     contacts_map = {}
     try:
         c_url = f"https://{domain}/api/v4/contacts?limit=100"
@@ -96,14 +138,18 @@ def sync_tenant_deals(tenant, gc):
     # 3. Fetch Leads
     leads_url = f"https://{domain}/api/v4/leads?with=contacts&limit=250"
     req = urllib.request.Request(leads_url, headers={"Authorization": f"Bearer {token.strip()}"})
-    with urllib.request.urlopen(req, timeout=10, context=ctx) as resp:
-        l_data = json.loads(resp.read().decode('utf-8'))
-        leads = l_data.get('_embedded', {}).get('leads', [])
+    try:
+        with urllib.request.urlopen(req, timeout=10, context=ctx) as resp:
+            l_data = json.loads(resp.read().decode('utf-8'))
+            leads = l_data.get('_embedded', {}).get('leads', [])
+    except Exception as e:
+        log(f"[{tenant_id}] Ошибка загрузки сделок: {e}")
+        return
 
     if not leads:
         return
 
-    # 4. Open Google Sheet
+    # 4. Open Google Sheet & Batch Update
     sh = gc.open_by_key(sheet_id)
     ws = sh.worksheet('raw_deals')
     existing_rows = ws.get_all_values()
@@ -112,13 +158,13 @@ def sync_tenant_deals(tenant, gc):
     now_iso = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     today_date = datetime.datetime.now().strftime("%Y-%m-%d")
 
-    updated_count = 0
-    appended_count = 0
+    deals_to_update = []
+    deals_to_append = []
 
     for lead in leads:
         lead_id = str(lead['id'])
         lead_name = lead.get('name', f"Сделка #{lead_id}")
-        price = lead.get('price', 0)
+        price = float(lead.get('price') or 0)
         status_id = lead.get('status_id')
         status_name = stages_map.get(status_id, 'В работе')
 
@@ -131,7 +177,10 @@ def sync_tenant_deals(tenant, gc):
 
         created_at_ts = lead.get('created_at', int(datetime.datetime.now().timestamp()))
         created_date = datetime.datetime.fromtimestamp(created_at_ts).strftime("%Y-%m-%d")
-        manager_id = lead.get('responsible_user_id', 101)
+        
+        raw_mgr_id = lead.get('responsible_user_id', 101)
+        manager_id = int(raw_mgr_id) if str(raw_mgr_id).isdigit() else raw_mgr_id
+        manager_name = users_map.get(str(raw_mgr_id), 'Менеджер')
 
         is_won = 1 if status_id == 142 else 0
         is_lost = 1 if status_id == 143 else 0
@@ -143,31 +192,37 @@ def sync_tenant_deals(tenant, gc):
             now_iso, is_won, is_lost, 1, "0-3d", price, 1,
             "-", "-", "-", "-", "-",
             today_date, "V18.0", "amoCRM Daemon 24/7", f"hash_{lead_id}_amo",
-            "Звонок", today_date, "Менеджер", "Телефон", "Норма",
-            85, now_iso, "#В_Работе"
+            "Звонок", today_date, manager_name, "Телефон", "Норма",
+            85, now_iso, "#В_Работе" if not (is_won or is_lost) else ("#Успешно" if is_won else "#Закрыто")
         ]
+        row_data = [sanitize_sheet_val(x) for x in row_data]
 
         if lead_id in existing_deal_ids:
             row_num = existing_deal_ids[lead_id] + 1
-            ws.update(f"A{row_num}:AK{row_num}", [row_data], value_input_option='USER_ENTERED')
-            updated_count += 1
+            deals_to_update.append({'range': f"A{row_num}:AK{row_num}", 'values': [row_data]})
         else:
-            ws.append_row(row_data, value_input_option='USER_ENTERED')
-            appended_count += 1
+            deals_to_append.append(row_data)
 
-    log(f"[{tenant_id} - {tenant_name}] Синхронизация завершена: {appended_count} новых, {updated_count} обновлено.")
+    # Batch write
+    if deals_to_update:
+        ws.batch_update(deals_to_update, value_input_option='USER_ENTERED')
+    if deals_to_append:
+        ws.append_rows(deals_to_append, value_input_option='USER_ENTERED')
+
+    log(f"[{tenant_id} - {tenant_name}] Синхронизация завершена: {len(deals_to_append)} новых, {len(deals_to_update)} обновлено.")
 
 def run_sync_cycle():
-    reg_file = None
-    for rf in REGISTRY_PATHS:
-        if os.path.exists(rf):
-            reg_file = rf
-            break
+    reg_file = find_registry_file()
     if not reg_file:
+        log("[-] Реестр clients/tenants_registry.json не найден ни по одному из путей.")
         return
 
-    with open(reg_file, 'r', encoding='utf-8') as f:
-        data = json.load(f)
+    try:
+        with open(reg_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+    except Exception as e:
+        log(f"[-] Ошибка чтения {reg_file}: {e}")
+        return
 
     tenants = data.get('tenants', [])
     if not tenants:
@@ -176,22 +231,22 @@ def run_sync_cycle():
     try:
         gc = get_gspread_client()
     except Exception as e:
-        log(f"Ошибка подключения к Google Drive API: {e}")
+        log(f"[-] Ошибка подключения к Google Drive API: {e}")
         return
 
     for t in tenants:
         try:
             sync_tenant_deals(t, gc)
         except Exception as e:
-            log(f"Ошибка синхронизации тенанта {t.get('tenant_id')}: {e}")
+            log(f"[-] Ошибка синхронизации тенанта {t.get('tenant_id')}: {e}")
 
 def main():
     prevent_windows_sleep()
-    with open(PID_FILE, 'w') as f:
+    with open(PID_FILE, 'w', encoding='utf-8') as f:
         f.write(str(os.getpid()))
 
     log("🚀 Демон фоновой синхронизации сделок RevOps (24/7) запущен.")
-    interval_sec = 180 # каждые 3 минуты
+    interval_sec = 180  # каждые 3 минуты
 
     while True:
         try:

@@ -3,7 +3,7 @@ chcp 65001 >nul
 title RevOps Enterprise OS - Onboarding Wizard
 color 0B
 
-cd /d "C:\Users\strel\.gemini\antigravity\scratch\jobhunter-ai\multitenant_revops"
+cd /d "%~dp0"
 
 where python >nul 2>&1
 if %errorlevel% equ 0 (

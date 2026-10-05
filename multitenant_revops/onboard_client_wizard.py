@@ -93,17 +93,19 @@ def run_wizard():
     print("  [3] 🏭 B2B производство, оборудование и сырье (ТЗ, ЛПР, окупаемость, Zoom)")
     print("  [4] 🏢 Недвижимость, строительство и девелопмент (ипотека, закрытие на показ)")
     print("  [5] 🩺 Медицина, здоровье, косметология и клиники (забота, 3D снимок, запись к врачу)")
-    print("  [6] 💼 Универсальный B2B (услуги, дистрибуция, опт)")
-    print("  [7] ✏️ Другая ниша (ввести свою нишу вручную)")
+    print("  [6] 🐾 Зоотовары, корма и ветеринария (порода, аллергии, фасовки 15 кг, доставка)")
+    print("  [7] 💼 Универсальный B2B (услуги, дистрибуция, опт)")
+    print("  [8] ✍️ Другая ниша (ввести вручную — ИИ мгновенно создаст профиль под ваш продукт)")
 
-    niche_choice = input("\n👉 Ваш выбор ниши [1-7, по умолчанию 1]: ").strip()
+    niche_choice = input("\n👉 Ваш выбор ниши [1-8, по умолчанию 1]: ").strip()
     niche_keys = {
         '1': 'auto_parts',
         '2': 'edtech_psychology',
         '3': 'b2b_equipment',
         '4': 'real_estate',
         '5': 'medical_services',
-        '6': 'general_b2b'
+        '6': 'pet_supplies',
+        '7': 'general_b2b'
     }
     if niche_choice in niche_keys:
         chosen_niche = NICHE_CATALOG[niche_keys[niche_choice]]
@@ -112,13 +114,17 @@ def run_wizard():
         def_check = chosen_niche['default_avg_check']
         def_ns = chosen_niche['target_next_step']
         def_obj = chosen_niche['main_objection']
-    elif niche_choice == '7':
-        niche_id = 'custom'
-        custom_name = input("  👉 Введите название вашей ниши: ").strip() or "Пользовательская ниша"
-        niche_name = custom_name
-        def_check = 100000
-        def_ns = "Фиксация следующего контакта с датой и временем"
-        def_obj = "Дорого / скиньте на почту"
+    elif niche_choice == '8':
+        custom_name = input("  👉 Чем занимается компания (напр. «Зоотовары оптом», «Клининг», «Натяжные потолки»): ").strip() or "Специализированная ниша"
+        # Проверяем интеллектуальное автоопределение
+        from niche_engine import create_dynamic_niche_profile
+        dyn = create_dynamic_niche_profile(custom_name)
+        niche_id = dyn['niche_id']
+        niche_name = dyn['niche_name']
+        def_check = dyn['default_avg_check']
+        def_ns = dyn['target_next_step']
+        def_obj = dyn['main_objection']
+        print(f"  ✨ ИИ распознал сферу бизнеса: «{dyn['icon']} {niche_name}»!")
     else:
         chosen_niche = NICHE_CATALOG['auto_parts']
         niche_id = 'auto_parts'
@@ -164,15 +170,18 @@ def run_wizard():
         print("     Права доступа: crm (Управление CRM)")
         crm_webhook = input("  👉 Входящий вебхук Битрикс24 (или Enter если настроите позже): ").strip()
         amo_domain = ""
+        amo_token = ""
     elif crm_choice == '3':
         crm_type = 'hybrid'
         print("\n  ⚙️ Настройка ГИБРИДНОГО РЕЖИМА (amoCRM + Битрикс24):")
         amo_domain = input("  👉 1. Домен amoCRM (напр. client.amocrm.ru, или Enter): ").strip()
-        crm_webhook = input("  👉 2. Входящий REST вебхук Битрикс24 (или Enter): ").strip()
+        amo_token = input("  👉    Долгосрочный API токен amoCRM (или Enter если позже): ").strip()
+        crm_webhook = input("  👉 2. Входящий REST вебхук Битрикс24 (или Enter если позже): ").strip()
     else:
         crm_type = 'amocrm'
         print("\n  ⚙️ Настройка amoCRM:")
         amo_domain = input("  👉 Домен или поддомен amoCRM (напр. client.amocrm.ru): ").strip()
+        amo_token = input("  👉 Долгосрочный API токен amoCRM (или Enter если настроите вторым шагом): ").strip()
         crm_webhook = ""
 
     # 5. Google Таблица (Изолированный дашборд)
@@ -209,6 +218,7 @@ def run_wizard():
         crm_type=crm_type,
         crm_webhook=crm_webhook,
         amo_domain=amo_domain,
+        amo_token=amo_token,
         niche_id=niche_id,
         niche_name=niche_name,
         avg_deal_check=avg_deal_check,
@@ -221,8 +231,19 @@ def run_wizard():
         input("\nНажмите Enter для выхода...")
         return
 
+    # Автоматическая сквозная синхронизация воронки и сделок
+    if amo_token or crm_webhook:
+        print("\n" + "═" * 74)
+        print("🚀 АВТОМАТИЧЕСКАЯ СИНХРОНИЗАЦИЯ ВОРОНКИ И СДЕЛОК ИЗ CRM...")
+        print("═" * 74)
+        try:
+            from crm_integration_manager import auto_discover_and_sync_all
+            auto_discover_and_sync_all(record)
+        except Exception as e:
+            print(f"    [!] Синхронизация сделок: {e}")
+
     # Инструкция для менеджера / клиента
-    print("📖 ЧТО СДЕЛАТЬ КЛИЕНТУ СЕЙЧАС (2 КЛИКА):")
+    print("\n📖 ЧТО СДЕЛАТЬ КЛИЕНТУ СЕЙЧАС (2 КЛИКА):")
     if crm_type == 'bitrix24':
         print("  1. В Битрикс24 клиента открыть: Разработчикам -> Другое -> Исходящий вебхук")
         print("  2. Вставить скопированный URL в поле 'URL обработчика'")
@@ -236,8 +257,8 @@ def run_wizard():
 
     # 5. Интерактивная проверка связки (CRM -> n8n -> Таблица)
     print("\n[ШАГ 5/5] ПРОВЕРКА И ТЕСТИРОВАНИЕ СВЯЗКИ (CRM ➔ n8n ➔ GOOGLE ТАБЛИЦА)")
-    print("💡 Вы можете отправить тестовый звонок и сразу проверить появление строки в таблице клиента.")
-    run_test = input("🧪 Перейти к проверке и тестированию интеграции прямо сейчас? [Y/n]: ").strip().lower()
+    print("💡 Вы можете открыть центр управления интеграцией для отправки тестовых звонков.")
+    run_test = input("🧪 Перейти к центру управления интеграцией прямо сейчас? [Y/n]: ").strip().lower()
     if run_test in ['', 'y', 'yes', 'д', 'да']:
         from crm_integration_manager import manage_client_integration
         manage_client_integration(tenant_record=record)

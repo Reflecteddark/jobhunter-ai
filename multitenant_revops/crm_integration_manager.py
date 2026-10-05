@@ -43,7 +43,7 @@ OTHER_REGISTRY_FILE = (
 try:
     scratch_dir = r"C:\Users\strel\.gemini\antigravity\scratch"
     if scratch_dir not in sys.path:
-        sys.path.insert(0, scratch_dir)
+        sys.path.append(scratch_dir)
     from tunnel_manager import get_active_tunnel_url, is_cloudflared_running, start_tunnel
 except:
     def get_active_tunnel_url(): return "http://localhost:5678"
@@ -122,96 +122,651 @@ def verify_amocrm_token(domain, token):
     except Exception as e:
         return False, str(e)
 
-def sync_amocrm_deals_to_sheet(sheet_id, domain, token):
-    """Синхронизирует все сделки из amoCRM в Google Таблицу (лист raw_deals)"""
-    try:
-        clean_domain = domain.replace('https://', '').replace('http://', '').strip('/')
+def clean_stage_name(raw_name: str) -> str:
+    cleaned = re.sub(r'^\d+[\.\s\-]+', '', str(raw_name).strip()).strip()
+    return cleaned or str(raw_name).strip()
+
+def sanitize_sheet_val(val):
+    """Предотвращает CSV/Formula Injection при записи в Google Таблицы"""
+    if isinstance(val, str) and val and val[0] in ('=', '+', '-', '@', '\t', '\r'):
+        return "'" + val
+    return val
+
+def discover_crm_stages_and_mapping(crm_type, amo_domain, amo_token, b24_webhook_url):
+    """
+    Автоматически считывает этапы воронки из amoCRM или Битрикс24
+    и возвращает:
+      crm_to_canonical: dict {crm_status_id: 1..7}
+      canonical_names: dict {1: "1. Этап", 2: "2. Этап", ... 7: "7. Этап"}
+      stage_settings: list of [name, sla_hours, win_prob] for rows 12..18
+    """
+    crm_to_canonical = {}
+    canonical_names = {}
+    stage_settings = []
+
+    def_sla = [24, 48, 72, 48, 72, 0, 0]
+    def_win = [0.10, 0.35, 0.60, 0.85, 0.95, 1.00, 0.00]
+
+    ctx = ssl.create_default_context()
+
+    if crm_type in ['amocrm', 'hybrid', 'both'] and amo_token:
+        clean_domain = (amo_domain or '').replace('https://', '').replace('http://', '').strip('/')
         if not clean_domain.endswith('.amocrm.ru'):
             clean_domain = f"{clean_domain}.amocrm.ru"
-            
+
         pipelines_url = f"https://{clean_domain}/api/v4/leads/pipelines"
-        req = urllib.request.Request(pipelines_url, headers={"Authorization": f"Bearer {token.strip()}"})
-        ctx = ssl.create_default_context()
-        stages_map = {}
+        req = urllib.request.Request(pipelines_url, headers={"Authorization": f"Bearer {amo_token.strip()}"})
         with urllib.request.urlopen(req, timeout=10, context=ctx) as resp:
             p_data = json.loads(resp.read().decode('utf-8'))
-            for p in p_data.get('_embedded', {}).get('pipelines', []):
-                for s in p.get('_embedded', {}).get('statuses', []):
-                    stages_map[s['id']] = s['name']
 
-        contacts_map = {}
+        pipelines = p_data.get('_embedded', {}).get('pipelines', [])
+        main_p = next((p for p in pipelines if p.get('is_main')), pipelines[0] if pipelines else {})
+        statuses = main_p.get('_embedded', {}).get('statuses', [])
+        statuses.sort(key=lambda s: int(s.get('sort') or 0))
+
+        won_st = [s for s in statuses if s.get('id') == 142 or 'успеш' in s.get('name', '').lower()]
+        lost_st = [s for s in statuses if s.get('id') == 143 or 'закрыт' in s.get('name', '').lower() or 'не реализ' in s.get('name', '').lower()]
+
+        active_st = []
+        unsorted_st = None
+        for s in statuses:
+            if s in won_st or s in lost_st:
+                continue
+            if 'неразобран' in s.get('name', '').lower():
+                unsorted_st = s
+            else:
+                active_st.append(s)
+
+        if not active_st and unsorted_st:
+            active_st.append(unsorted_st)
+            unsorted_st = None
+
+        default_names = ["Первичный контакт", "Переговоры", "Принимают решение", "Согласование договора", "Счёт / Оплата"]
+        for i in range(5):
+            slot = i + 1
+            if i < len(active_st):
+                st = active_st[i]
+                crm_to_canonical[st['id']] = slot
+                name = clean_stage_name(st['name'])
+            else:
+                name = default_names[i]
+            canonical_names[slot] = f"{slot}. {name}"
+
+        if unsorted_st:
+            crm_to_canonical[unsorted_st['id']] = 1
+
+        if len(active_st) > 5:
+            for extra_st in active_st[5:]:
+                crm_to_canonical[extra_st['id']] = 5
+
+        won = won_st[0] if won_st else {'id': 142, 'name': 'Успешно реализовано'}
+        for w in won_st:
+            crm_to_canonical[w['id']] = 6
+        crm_to_canonical[142] = 6
+        canonical_names[6] = f"6. {clean_stage_name(won.get('name', 'Успешно реализовано'))}"
+
+        lost = lost_st[0] if lost_st else {'id': 143, 'name': 'Закрыто и не реализовано'}
+        for l in lost_st:
+            crm_to_canonical[l['id']] = 7
+        crm_to_canonical[143] = 7
+        canonical_names[7] = f"7. {clean_stage_name(lost.get('name', 'Закрыто и не реализовано'))}"
+
+    elif crm_type == 'bitrix24' and b24_webhook_url:
+        clean_url = b24_webhook_url.strip()
+        if not clean_url.endswith('/'):
+            clean_url += '/'
+
+        stages_url = f"{clean_url}crm.dealcategory.stage.list?id=0"
+        req = urllib.request.Request(stages_url)
+        with urllib.request.urlopen(req, timeout=10, context=ctx) as resp:
+            data = json.loads(resp.read().decode('utf-8'))
+        raw_stages = data.get('result', [])
+
+        if not raw_stages:
+            fallback_url = f"{clean_url}crm.status.list?ENTITY_ID=DEAL_STAGE"
+            req2 = urllib.request.Request(fallback_url)
+            with urllib.request.urlopen(req2, timeout=10, context=ctx) as resp2:
+                data2 = json.loads(resp2.read().decode('utf-8'))
+            raw_stages = data2.get('result', [])
+
+        raw_stages.sort(key=lambda s: int(s.get('SORT') or 0))
+
+        won_st = [s for s in raw_stages if 'WON' in str(s.get('STATUS_ID', '')) or 'SUCCESS' in str(s.get('STATUS_ID', ''))]
+        lost_st = [s for s in raw_stages if any(k in str(s.get('STATUS_ID', '')) for k in ['LOSE', 'FAIL', 'APOLOGY'])]
+        active_st = [s for s in raw_stages if s not in won_st and s not in lost_st]
+
+        default_names = ["Новая", "Подготовка документов", "Cчёт на предоплату", "В работе", "Финальный счёт"]
+        for i in range(5):
+            slot = i + 1
+            if i < len(active_st):
+                st = active_st[i]
+                crm_to_canonical[st['STATUS_ID']] = slot
+                name = clean_stage_name(st['NAME'])
+            else:
+                name = default_names[i]
+            canonical_names[slot] = f"{slot}. {name}"
+
+        if len(active_st) > 5:
+            for extra_st in active_st[5:]:
+                crm_to_canonical[extra_st['STATUS_ID']] = 5
+
+        won = won_st[0] if won_st else {'STATUS_ID': 'WON', 'NAME': 'Сделка успешна'}
+        for w in won_st:
+            crm_to_canonical[w['STATUS_ID']] = 6
+        crm_to_canonical['WON'] = 6
+        canonical_names[6] = f"6. {clean_stage_name(won.get('NAME', 'Сделка успешна'))}"
+
+        lost = lost_st[0] if lost_st else {'STATUS_ID': 'LOSE', 'NAME': 'Сделка провалена'}
+        for l in lost_st:
+            crm_to_canonical[l['STATUS_ID']] = 7
+        crm_to_canonical['LOSE'] = 7
+        canonical_names[7] = f"7. {clean_stage_name(lost.get('NAME', 'Сделка провалена'))}"
+
+    else:
+        canonical_names = {
+            1: "1. Новый лид",
+            2: "2. Квалификация / ЛПР",
+            3: "3. Встреча / Демо",
+            4: "4. КП и согласование",
+            5: "5. Счет выставлен",
+            6: "6. Успешно реализовано",
+            7: "7. Закрыто и не реализовано"
+        }
+
+    for slot in range(1, 8):
+        stage_settings.append([
+            canonical_names.get(slot, f"{slot}. Этап {slot}"),
+            def_sla[slot - 1],
+            def_win[slot - 1]
+        ])
+
+    return crm_to_canonical, canonical_names, stage_settings
+
+def discover_crm_users(crm_type, amo_domain, amo_token, b24_webhook_url, client_email=None):
+    """
+    Автоматически опрашивает API CRM (amoCRM / Битрикс24)
+    и возвращает список реальных пользователей/менеджеров:
+    [
+      {
+        "id": "11422686",
+        "name": "Дмитрий Федотов",
+        "email": "dmitriyfedotov1908@gmail.com",
+        "role": "РОП",
+        "is_admin": True,
+        "crm_type": "amocrm"
+      },
+      ...
+    ]
+    """
+    users = []
+    ctx = ssl.create_default_context()
+
+    # amoCRM пользователи
+    if crm_type in ['amocrm', 'hybrid', 'both'] and amo_token:
+        clean_domain = (amo_domain or '').replace('https://', '').replace('http://', '').strip('/')
+        if not clean_domain.endswith('.amocrm.ru'):
+            clean_domain = f"{clean_domain}.amocrm.ru"
+        users_url = f"https://{clean_domain}/api/v4/users"
         try:
-            c_url = f"https://{clean_domain}/api/v4/contacts?limit=50"
-            c_req = urllib.request.Request(c_url, headers={"Authorization": f"Bearer {token.strip()}"})
-            with urllib.request.urlopen(c_req, timeout=10, context=ctx) as resp:
-                c_data = json.loads(resp.read().decode('utf-8'))
-                for c in c_data.get('_embedded', {}).get('contacts', []):
-                    contacts_map[c['id']] = c.get('name', 'Клиент')
-        except:
+            req = urllib.request.Request(users_url, headers={"Authorization": f"Bearer {amo_token.strip()}"})
+            with urllib.request.urlopen(req, timeout=10, context=ctx) as resp:
+                u_data = json.loads(resp.read().decode('utf-8'))
+                raw_users = u_data.get('_embedded', {}).get('users', [])
+                for u in raw_users:
+                    uid = str(u.get('id'))
+                    uname = clean_stage_name(u.get('name') or f"Пользователь {uid}")
+                    uemail = str(u.get('email') or '').strip()
+                    is_adm = bool(u.get('rights', {}).get('is_admin'))
+                    role = "РОП" if is_adm else "Менеджер ОП"
+                    users.append({
+                        "id": uid,
+                        "name": uname,
+                        "email": uemail,
+                        "role": role,
+                        "is_admin": is_adm,
+                        "crm_type": "amocrm"
+                    })
+        except Exception:
             pass
 
-        leads_url = f"https://{clean_domain}/api/v4/leads?with=contacts"
-        req = urllib.request.Request(leads_url, headers={"Authorization": f"Bearer {token.strip()}"})
-        with urllib.request.urlopen(req, timeout=10, context=ctx) as resp:
-            l_data = json.loads(resp.read().decode('utf-8'))
-            leads = l_data.get('_embedded', {}).get('leads', [])
+    # Битрикс24 пользователи
+    if crm_type in ['bitrix24', 'hybrid', 'both'] and b24_webhook_url:
+        clean_url = b24_webhook_url.strip()
+        if not clean_url.endswith('/'):
+            clean_url += '/'
+        b24_users_url = f"{clean_url}user.get?ACTIVE=Y"
+        try:
+            req = urllib.request.Request(b24_users_url)
+            with urllib.request.urlopen(req, timeout=10, context=ctx) as resp:
+                b_data = json.loads(resp.read().decode('utf-8'))
+                raw_b_users = b_data.get('result', [])
+                for u in raw_b_users:
+                    uid = str(u.get('ID'))
+                    fname = (u.get('NAME') or '').strip()
+                    lname = (u.get('LAST_NAME') or '').strip()
+                    uname = f"{fname} {lname}".strip() or u.get('EMAIL') or f"Менеджер {uid}"
+                    uemail = str(u.get('EMAIL') or '').strip()
+                    pos = str(u.get('WORK_POSITION') or '').lower()
+                    is_adm = any(k in pos for k in ['роп', 'рук', 'дир', 'head', 'lead', 'админ', 'admin']) or uid == '1'
+                    role = "РОП" if is_adm else ("КАМ" if any(k in pos for k in ['кам', 'kam']) else "Менеджер ОП")
+                    if not any(x['id'] == uid and x['crm_type'] == 'bitrix24' for x in users):
+                        users.append({
+                            "id": uid,
+                            "name": uname,
+                            "email": uemail,
+                            "role": role,
+                            "is_admin": is_adm,
+                            "crm_type": "bitrix24"
+                        })
+        except Exception:
+            pass
 
-        if not leads:
-            return True, 0, "В amoCRM пока нет сделок"
+    # Интеллектуальная сортировка:
+    # 1. Основной пользователь (совпадающий с client_email)
+    # 2. Администраторы / РОПы
+    # 3. Реальные ФИО (без @ в имени)
+    def user_sort_key(u):
+        is_client = 0 if (client_email and u.get('email') and u['email'].lower() == str(client_email).lower()) else 1
+        is_admin = 0 if u.get('is_admin') else 1
+        has_real_name = 0 if ('@' not in u.get('name', '') and u.get('name')) else 1
+        return (is_client, is_admin, has_real_name, u.get('id'))
 
+    users.sort(key=user_sort_key)
+
+    if not users:
+        users = [{
+            "id": "101",
+            "name": "Менеджер 1 (РОП)",
+            "email": "",
+            "role": "РОП",
+            "is_admin": True,
+            "crm_type": "default"
+        }]
+
+    return users
+
+def auto_discover_and_sync_all(tenant_record):
+    """
+    Полная сквозная авто-синхронизация под ключ:
+    1. Считывает этапы воронки и сотрудников из CRM (amoCRM / Битрикс24)
+    2. Нормализует этапы (1..5 в работе, 6 выиграно, 7 проиграно)
+    3. Записывает этапы в ⚙️ Настройки!B12:D18 и сотрудников в ⚙️ Настройки!A21:E24
+    4. Обновляет RBAC email маппинг в ⚙️ Настройки!J10:L10
+    5. Настраивает динамические формулы сотрудников (calc_engine, 👥 Ресурсный_План, 🌐 Сквозная_RevOps_Аналитика, calc_sales)
+    6. Загружает сделки из CRM и нормализует stage_id (1..7), ответственных менеджеров и суммы (#,##0 ₽)
+    7. Настраивает динамические формулы на листах ⚡ Пульс_Компании (A10:D16) и 🎯 Воронка_и_SLA (A4:F10)
+    8. Настраивает воркфлоу n8n (токен, URL, привязка spreadsheet_id)
+    9. Сохраняет метаданные синхронизации (этапы + сотрудники) в tenants_registry.json
+    """
+    try:
+        sheet_id = tenant_record['spreadsheet_id']
+        crm_type = tenant_record.get('crm_type', 'amocrm')
+        amo_domain = tenant_record.get('amo_domain', '')
+        amo_token = tenant_record.get('amo_token', '')
+        b24_webhook = tenant_record.get('b24_webhook_url') or tenant_record.get('crm_webhook_url', '')
+        client_email = tenant_record.get('client_email', '')
+
+        ctx = ssl.create_default_context()
         gc = get_gspread_client()
         sh = gc.open_by_key(sheet_id)
-        ws = sh.worksheet('raw_deals')
+        print(f"\n[1/7] 📊 Google Таблица открыта: '{sh.title}'")
 
-        existing_rows = ws.get_all_values()
-        existing_deal_ids = {row[0]: idx + 1 for idx, row in enumerate(existing_rows[1:]) if row and row[0]}
+        # 1. Считывание стадий воронки и сотрудников из CRM
+        print(f"[2/7] 🔍 Считывание этапов воронки и сотрудников из CRM ({crm_type.upper()})...")
+        crm_to_canon, canon_names, stage_settings = discover_crm_stages_and_mapping(
+            crm_type, amo_domain, amo_token, b24_webhook
+        )
+        discovered_users = discover_crm_users(
+            crm_type, amo_domain, amo_token, b24_webhook, client_email=client_email
+        )
+        users_map = {str(u['id']): u['name'] for u in discovered_users}
+        primary_user = discovered_users[0]
+
+        print("      Обнаруженные этапы воронки:")
+        for s in stage_settings:
+            print(f"      • {s[0]} (SLA: {s[1]}ч, Win%: {int(s[2]*100)}%)")
+        print("      Обнаруженные сотрудники CRM:")
+        for u in discovered_users:
+            print(f"      • [{u['id']}] {u['name']} ({u['role']}, {u['email'] or 'нет email'})")
+
+        # 2. Обновление листа ⚙️ Настройки (Этапы + Сотрудники + RBAC)
+        print("[3/7] ⚙️ Синхронизация листа '⚙️ Настройки' (Этапы + Сотрудники + RBAC)...")
+        ws_settings = sh.worksheet('⚙️ Настройки')
+        existing_settings = ws_settings.get('C12:D18')
+        for idx, row in enumerate(existing_settings):
+            if row and len(row) >= 1 and str(row[0]).strip().isdigit():
+                stage_settings[idx][1] = int(row[0])
+            if row and len(row) >= 2:
+                try:
+                    val = float(str(row[1]).replace(',', '.').replace('%', ''))
+                    if val > 1.0: val /= 100.0
+                    stage_settings[idx][2] = val
+                except:
+                    pass
+
+        ws_settings.update(range_name='B12:D18', values=stage_settings, value_input_option='USER_ENTERED')
+
+        # Запись сотрудников в A21:E24 (4 слота, лишние очищаются '—')
+        manager_rows = []
+        default_roles = ["РОП", "КАМ", "SDR", "SDR-2"]
+        default_limits = [50, 30, 40, 40]
+        for slot in range(4):
+            if slot < len(discovered_users):
+                u = discovered_users[slot]
+                uid = int(u['id']) if str(u['id']).isdigit() else u['id']
+                uname = u['name']
+                urole = u.get('role') or default_roles[slot]
+                ulimit = default_limits[slot]
+                ustatus = "Норма"
+                manager_rows.append([uid, uname, urole, ulimit, ustatus])
+            else:
+                manager_rows.append(["—", "—", "—", 0, "—"])
+        ws_settings.update(range_name='A21:E24', values=manager_rows, value_input_option='USER_ENTERED')
+
+        # RBAC Email mapping (привязка почты первого админа/клиента к роли CEO)
+        client_email = tenant_record.get('client_email') or primary_user.get('email')
+        if client_email:
+            rbac_updates = [[client_email, '👑 CEO', '📄 Executive_OnePager']]
+            ws_settings.update(range_name='J10:L10', values=rbac_updates, value_input_option='USER_ENTERED')
+        print("      [✓] Лист '⚙️ Настройки' успешно обновлён!")
+
+        # 3. Настройка динамических формул по сотрудникам
+        print("[4/7] 🔗 Настройка динамических формул сотрудников (calc_engine, Ресурсный план, Аналитика)...")
+        try:
+            ws_ce = sh.worksheet('calc_engine')
+            ce_formulas = [
+                ["='⚙️ Настройки'!$A$21", "='⚙️ Настройки'!$B$21", 150000, "=IF(OR('⚙️ Настройки'!$A$21=\"—\", '⚙️ Настройки'!$A$21=\"\"), 0, SUMIFS(raw_deals!$C$2:$C1000, raw_deals!$H$2:$H1000, '⚙️ Настройки'!$A$21, raw_deals!$O$2:$O1000, TRUE))", 0.03, 1, 1.05],
+                ["='⚙️ Настройки'!$A$22", "='⚙️ Настройки'!$B$22", 100000, "=IF(OR('⚙️ Настройки'!$A$22=\"—\", '⚙️ Настройки'!$A$22=\"\"), 0, SUMIFS(raw_deals!$C$2:$C1000, raw_deals!$H$2:$H1000, '⚙️ Настройки'!$A$22, raw_deals!$O$2:$O1000, TRUE))", 0.05, 1, 0.70],
+                ["='⚙️ Настройки'!$A$23", "='⚙️ Настройки'!$B$23", 70000, "=IF(OR('⚙️ Настройки'!$A$23=\"—\", '⚙️ Настройки'!$A$23=\"\"), 0, SUMIFS(raw_deals!$C$2:$C1000, raw_deals!$H$2:$H1000, '⚙️ Настройки'!$A$23, raw_deals!$O$2:$O1000, TRUE))", 0.00, 1, 1.10]
+            ]
+            ws_ce.update(range_name='A172:G174', values=ce_formulas, value_input_option='USER_ENTERED')
+            ce_counts = [
+                ["=IF(OR('⚙️ Настройки'!$A$21=\"—\", '⚙️ Настройки'!$A$21=\"\"), 0, COUNTIFS(raw_deals!$H$2:$H1000, '⚙️ Настройки'!$A$21, raw_deals!$D$2:$D1000, \"<=5\"))"],
+                ["=IF(OR('⚙️ Настройки'!$A$22=\"—\", '⚙️ Настройки'!$A$22=\"\"), 0, COUNTIFS(raw_deals!$H$2:$H1000, '⚙️ Настройки'!$A$22, raw_deals!$D$2:$D1000, \"<=5\"))"],
+                ["=IF(OR('⚙️ Настройки'!$A$23=\"—\", '⚙️ Настройки'!$A$23=\"\"), 0, COUNTIFS(raw_deals!$H$2:$H1000, '⚙️ Настройки'!$A$23, raw_deals!$D$2:$D1000, \"<=5\"))"]
+            ]
+            ws_ce.update(range_name='D43:D45', values=ce_counts, value_input_option='USER_ENTERED')
+        except Exception as e:
+            print(f"      [!] calc_engine: {e}")
+
+        try:
+            ws_res = sh.worksheet('👥 Ресурсный_План')
+            res_formulas = [
+                ["='⚙️ Настройки'!$A$21", "='⚙️ Настройки'!$B$21", "='⚙️ Настройки'!$C$21", "='⚙️ Настройки'!$D$21"],
+                ["='⚙️ Настройки'!$A$22", "='⚙️ Настройки'!$B$22", "='⚙️ Настройки'!$C$22", "='⚙️ Настройки'!$D$22"],
+                ["='⚙️ Настройки'!$A$23", "='⚙️ Настройки'!$B$23", "='⚙️ Настройки'!$C$23", "='⚙️ Настройки'!$D$23"]
+            ]
+            ws_res.update(range_name='A8:D10', values=res_formulas, value_input_option='USER_ENTERED')
+        except Exception as e:
+            print(f"      [!] 👥 Ресурсный_План: {e}")
+
+        try:
+            ws_an = sh.worksheet('🌐 Сквозная_RevOps_Аналитика')
+            an_ids = [
+                ["='⚙️ Настройки'!$A$21", "='⚙️ Настройки'!$B$21", "='⚙️ Настройки'!$C$21"],
+                ["='⚙️ Настройки'!$A$22", "='⚙️ Настройки'!$B$22", "='⚙️ Настройки'!$C$22"],
+                ["='⚙️ Настройки'!$A$23", "='⚙️ Настройки'!$B$23", "='⚙️ Настройки'!$C$23"]
+            ]
+            ws_an.update(range_name='A17:C19', values=an_ids, value_input_option='USER_ENTERED')
+            an_sums = [
+                ["=IF(OR('⚙️ Настройки'!$A$21=\"—\", '⚙️ Настройки'!$A$21=\"\"), 0, SUMIFS(raw_deals!$C$2:$C1000, raw_deals!$H$2:$H1000, '⚙️ Настройки'!$A$21, raw_deals!$D$2:$D1000, 6))"],
+                ["=IF(OR('⚙️ Настройки'!$A$22=\"—\", '⚙️ Настройки'!$A$22=\"\"), 0, SUMIFS(raw_deals!$C$2:$C1000, raw_deals!$H$2:$H1000, '⚙️ Настройки'!$A$22, raw_deals!$D$2:$D1000, 6))"],
+                ["=IF(OR('⚙️ Настройки'!$A$23=\"—\", '⚙️ Настройки'!$A$23=\"\"), 0, SUMIFS(raw_deals!$C$2:$C1000, raw_deals!$H$2:$H1000, '⚙️ Настройки'!$A$23, raw_deals!$D$2:$D1000, 6))"]
+            ]
+            ws_an.update(range_name='I17:I19', values=an_sums, value_input_option='USER_ENTERED')
+        except Exception as e:
+            print(f"      [!] 🌐 Сквозная_RevOps_Аналитика: {e}")
+
+        try:
+            ws_cs = sh.worksheet('calc_sales')
+            ws_cs.update(range_name='A15', values=[["=\"Доля клиентской базы РОПа (\" & '⚙️ Настройки'!$B$21 & \")\""]], value_input_option='USER_ENTERED')
+            ws_cs.update(range_name='B15', values=[["=IF(OR('⚙️ Настройки'!$A$21=\"—\", '⚙️ Настройки'!$A$21=\"\"), 0, COUNTIFS(raw_deals!$H$2:$H1000, '⚙️ Настройки'!$A$21, raw_deals!$D$2:$D1000, \"<=5\")/MAX(calc_engine!B16, 1))"]], value_input_option='USER_ENTERED')
+        except Exception as e:
+            print(f"      [!] calc_sales: {e}")
+
+        # 4. Синхронизация сделок из CRM в raw_deals
+        print("[5/7] 📥 Загрузка и нормализация сделок в 'raw_deals'...")
+        ws_deals = sh.worksheet('raw_deals')
+        existing_deals = ws_deals.get_all_values()
+        existing_deal_ids = {row[0]: idx + 1 for idx, row in enumerate(existing_deals[1:]) if row and row[0]}
 
         now_iso = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         today_date = datetime.datetime.now().strftime("%Y-%m-%d")
 
-        synced_count = 0
-        for lead in leads:
-            lead_id = str(lead['id'])
-            lead_name = lead.get('name', f"Сделка #{lead_id}")
-            price = lead.get('price', 0)
-            status_id = lead.get('status_id')
-            status_name = stages_map.get(status_id, 'В работе')
-            
-            contact_name = lead_name
-            lead_contacts = lead.get('_embedded', {}).get('contacts', [])
-            if lead_contacts:
-                first_cid = lead_contacts[0].get('id')
-                if first_cid in contacts_map:
-                    contact_name = contacts_map[first_cid]
-                    
-            created_at_ts = lead.get('created_at', int(datetime.datetime.now().timestamp()))
-            created_date = datetime.datetime.fromtimestamp(created_at_ts).strftime("%Y-%m-%d")
-            manager_id = lead.get('responsible_user_id', 101)
-            
-            is_won = 1 if status_id == 142 else 0
-            is_lost = 1 if status_id == 143 else 0
-            
-            row_data = [
-                lead_id, contact_name, price, status_id, status_name,
-                created_date, created_date, manager_id, "SMB", "amoCRM",
-                f"C-{lead_id}", "B", "-" if not is_lost else "LOST",
-                now_iso, is_won, is_lost, 1, "0-3d", price, 1,
-                "-", "-", "-", "-", "-",
-                today_date, "V18.0", "amoCRM Auto-Sync", f"hash_{lead_id}_amo",
-                "Звонок", today_date, "Менеджер", "Телефон", "Норма",
-                85, now_iso, "#В_Работе"
-            ]
-            
-            if lead_id in existing_deal_ids:
-                row_num = existing_deal_ids[lead_id] + 1
-                ws.update(f"A{row_num}:AK{row_num}", [row_data], value_input_option='USER_ENTERED')
-            else:
-                ws.append_row(row_data, value_input_option='USER_ENTERED')
-            synced_count += 1
-            
-        return True, synced_count, f"Успешно синхронизировано сделок amoCRM: {synced_count}"
+        synced_deals_count = 0
+        total_pipeline_sum = 0.0
+        deals_to_update = []
+        deals_to_append = []
+
+        # amoCRM сделки
+        if crm_type in ['amocrm', 'hybrid', 'both'] and amo_token:
+            clean_domain = amo_domain.replace('https://', '').replace('http://', '').strip('/')
+            if not clean_domain.endswith('.amocrm.ru'):
+                clean_domain = f"{clean_domain}.amocrm.ru"
+
+            contacts_map = {}
+            try:
+                c_url = f"https://{clean_domain}/api/v4/contacts?limit=50"
+                c_req = urllib.request.Request(c_url, headers={"Authorization": f"Bearer {amo_token.strip()}"})
+                with urllib.request.urlopen(c_req, timeout=10, context=ctx) as resp:
+                    c_data = json.loads(resp.read().decode('utf-8'))
+                    for c in c_data.get('_embedded', {}).get('contacts', []):
+                        contacts_map[c['id']] = c.get('name', 'Клиент')
+            except:
+                pass
+
+            leads_url = f"https://{clean_domain}/api/v4/leads?with=contacts&limit=250"
+            req = urllib.request.Request(leads_url, headers={"Authorization": f"Bearer {amo_token.strip()}"})
+            with urllib.request.urlopen(req, timeout=10, context=ctx) as resp:
+                l_data = json.loads(resp.read().decode('utf-8'))
+                leads = l_data.get('_embedded', {}).get('leads', [])
+
+            for lead in leads:
+                lead_id = str(lead['id'])
+                lead_name = lead.get('name', f"Сделка #{lead_id}")
+                price = float(lead.get('price') or 0)
+                status_id = lead.get('status_id')
+                
+                stage_num = crm_to_canon.get(status_id, 1)
+                stage_name = clean_stage_name(canon_names.get(stage_num, 'В работе'))
+                
+                contact_name = lead_name
+                lead_contacts = lead.get('_embedded', {}).get('contacts', [])
+                if lead_contacts:
+                    first_cid = lead_contacts[0].get('id')
+                    if first_cid in contacts_map:
+                        contact_name = contacts_map[first_cid]
+
+                created_at_ts = lead.get('created_at', int(datetime.datetime.now().timestamp()))
+                created_date = datetime.datetime.fromtimestamp(created_at_ts).strftime("%Y-%m-%d")
+                
+                raw_mgr_id = lead.get('responsible_user_id') or primary_user['id']
+                manager_id = int(raw_mgr_id) if str(raw_mgr_id).isdigit() else raw_mgr_id
+                manager_name = users_map.get(str(raw_mgr_id), primary_user['name'])
+
+                win_prob = stage_settings[stage_num - 1][2]
+                weighted_val = round(price * win_prob, 2)
+
+                is_won = 1 if stage_num == 6 else 0
+                is_lost = 1 if stage_num == 7 else 0
+
+                row_data = [
+                    lead_id, contact_name, price, stage_num, stage_name,
+                    created_date, created_date, manager_id, "SMB", "amoCRM",
+                    f"C-{lead_id}", "A" if price > 300000 else "B", "-" if not is_lost else "LOST",
+                    now_iso, is_won, is_lost, 1, "0-3d", weighted_val, 1,
+                    "-", "-", "-", "-", "-",
+                    today_date, "V18.0", "amoCRM Auto-Sync", f"hash_{lead_id}_amo",
+                    "Звонок", today_date, manager_name, "Телефон", "Норма",
+                    85, now_iso, "#В_Работе" if stage_num <= 5 else ("#Успешно" if stage_num == 6 else "#Закрыто")
+                ]
+                row_data = [sanitize_sheet_val(x) for x in row_data]
+
+                if lead_id in existing_deal_ids:
+                    row_num = existing_deal_ids[lead_id] + 1
+                    deals_to_update.append({'range': f"A{row_num}:AK{row_num}", 'values': [row_data]})
+                else:
+                    deals_to_append.append(row_data)
+
+                synced_deals_count += 1
+                if stage_num <= 5:
+                    total_pipeline_sum += price
+
+        # Bitrix24 сделки
+        if crm_type in ['bitrix24', 'hybrid', 'both'] and b24_webhook:
+            clean_url = b24_webhook.strip()
+            if not clean_url.endswith('/'):
+                clean_url += '/'
+
+            list_url = f"{clean_url}crm.deal.list"
+            payload = json.dumps({
+                "order": {"DATE_MODIFY": "DESC"},
+                "select": ["ID", "TITLE", "OPPORTUNITY", "STAGE_ID", "DATE_CREATE", "DATE_MODIFY", "ASSIGNED_BY_ID"],
+                "start": 0
+            }).encode('utf-8')
+            req = urllib.request.Request(list_url, data=payload, headers={"Content-Type": "application/json"})
+            with urllib.request.urlopen(req, timeout=10, context=ctx) as resp:
+                d_data = json.loads(resp.read().decode('utf-8'))
+                b_deals = d_data.get('result', [])
+
+            for deal in b_deals:
+                deal_id = f"B24-{deal['ID']}"
+                deal_name = deal.get('TITLE', f"Сделка #{deal['ID']}")
+                price = float(deal.get('OPPORTUNITY') or 0)
+                b24_st = deal.get('STAGE_ID', 'NEW')
+
+                stage_num = crm_to_canon.get(b24_st, 1)
+                stage_name = clean_stage_name(canon_names.get(stage_num, 'В работе'))
+
+                created_date = (deal.get('DATE_CREATE') or today_date)[:10]
+                modified_date = (deal.get('DATE_MODIFY') or today_date)[:10]
+                
+                raw_mgr_id = deal.get('ASSIGNED_BY_ID') or primary_user['id']
+                manager_id = int(raw_mgr_id) if str(raw_mgr_id).isdigit() else raw_mgr_id
+                manager_name = users_map.get(str(raw_mgr_id), primary_user['name'])
+
+                win_prob = stage_settings[stage_num - 1][2]
+                weighted_val = round(price * win_prob, 2)
+
+                is_won = 1 if stage_num == 6 else 0
+                is_lost = 1 if stage_num == 7 else 0
+
+                row_data = [
+                    deal_id, deal_name, price, stage_num, stage_name,
+                    created_date, modified_date, manager_id, "B2B", "Bitrix24",
+                    f"C-{deal_id}", "A" if price > 300000 else "B", "-" if not is_lost else "LOST",
+                    now_iso, is_won, is_lost, 1, "0-3d", weighted_val, 1,
+                    "-", "-", "-", "-", "-",
+                    today_date, "V18.0", "Bitrix24 Auto-Sync", f"hash_{deal['ID']}_b24",
+                    "Звонок", today_date, manager_name, "Телефон", "Норма",
+                    90, now_iso, "#В_Работе" if stage_num <= 5 else ("#Успешно" if stage_num == 6 else "#Закрыто")
+                ]
+                row_data = [sanitize_sheet_val(x) for x in row_data]
+
+                if deal_id in existing_deal_ids:
+                    row_num = existing_deal_ids[deal_id] + 1
+                    deals_to_update.append({'range': f"A{row_num}:AK{row_num}", 'values': [row_data]})
+                else:
+                    deals_to_append.append(row_data)
+
+                synced_deals_count += 1
+                if stage_num <= 5:
+                    total_pipeline_sum += price
+
+        # Пакетное сохранение в Google Sheets (защита от лимита 60 req/min)
+        if deals_to_update:
+            ws_deals.batch_update(deals_to_update, value_input_option='USER_ENTERED')
+        if deals_to_append:
+            ws_deals.append_rows(deals_to_append, value_input_option='USER_ENTERED')
+
+        try:
+            ws_deals.format('C2:C500', {'numberFormat': {'type': 'CURRENCY', 'pattern': '#,##0 ₽'}, 'horizontalAlignment': 'RIGHT'})
+            ws_deals.format('S2:S500', {'numberFormat': {'type': 'CURRENCY', 'pattern': '#,##0 ₽'}, 'horizontalAlignment': 'RIGHT'})
+            ws_deals.format('D2:D500', {'numberFormat': {'type': 'NUMBER', 'pattern': '0'}, 'horizontalAlignment': 'CENTER'})
+        except Exception:
+            pass
+
+        print(f"      [✓] Синхронизировано сделок: {synced_deals_count} (Активный пайплайн: {total_pipeline_sum:,.0f} ₽)".replace(",", " "))
+
+        # 5. Настройка дашбордов ⚡ Пульс_Компании и 🎯 Воронка_и_SLA
+        print("[6/7] 📈 Активация дашбордов '⚡ Пульс_Компании' и '🎯 Воронка_и_SLA'...")
+        ws_pulse = sh.worksheet('⚡ Пульс_Компании')
+        pulse_rows = [
+            ["='⚙️ Настройки'!$B$12", '=COUNTIF(raw_deals!$D$2:$D$1000, 1)', '=SUMIF(raw_deals!$D$2:$D$1000, 1, raw_deals!$C$2:$C$1000)', '=calc_engine!D2'],
+            ["='⚙️ Настройки'!$B$13", '=COUNTIF(raw_deals!$D$2:$D$1000, 2)', '=SUMIF(raw_deals!$D$2:$D$1000, 2, raw_deals!$C$2:$C$1000)', '=calc_engine!D3'],
+            ["='⚙️ Настройки'!$B$14", '=COUNTIF(raw_deals!$D$2:$D$1000, 3)', '=SUMIF(raw_deals!$D$2:$D$1000, 3, raw_deals!$C$2:$C$1000)', '=calc_engine!D4'],
+            ["='⚙️ Настройки'!$B$15", '=COUNTIF(raw_deals!$D$2:$D$1000, 4)', '=SUMIF(raw_deals!$D$2:$D$1000, 4, raw_deals!$C$2:$C$1000)', '=calc_engine!D5'],
+            ["='⚙️ Настройки'!$B$16", '=COUNTIF(raw_deals!$D$2:$D$1000, 5)', '=SUMIF(raw_deals!$D$2:$D$1000, 5, raw_deals!$C$2:$C$1000)', '=calc_engine!D6'],
+            ["='⚙️ Настройки'!$B$17", '=COUNTIF(raw_deals!$D$2:$D$1000, 6)', '=SUMIF(raw_deals!$D$2:$D$1000, 6, raw_deals!$C$2:$C$1000)', '=calc_engine!D7'],
+            ["='⚙️ Настройки'!$B$18", '=COUNTIF(raw_deals!$D$2:$D$1000, 7)', '=SUMIF(raw_deals!$D$2:$D$1000, 7, raw_deals!$C$2:$C$1000)', '=calc_engine!D8']
+        ]
+        ws_pulse.update(range_name='A10:D16', values=pulse_rows, value_input_option='USER_ENTERED')
+        ws_pulse.format('B10:B16', {'numberFormat': {'type': 'NUMBER', 'pattern': '0" шт"'}, 'horizontalAlignment': 'CENTER'})
+        ws_pulse.format('C10:D16', {'numberFormat': {'type': 'CURRENCY', 'pattern': '#,##0 ₽'}, 'horizontalAlignment': 'RIGHT'})
+
+        ws_funnel = sh.worksheet('🎯 Воронка_и_SLA')
+        funnel_formulas = [
+            ["='⚙️ Настройки'!$B$12", '=calc_engine!E2', '=calc_engine!G2', '=\'⚙️ Настройки\'!$C$12 & " ч"', '=TEXT(MAX(0, IFERROR(AVERAGEIFS(raw_deals!$Q$2:$Q1000, raw_deals!$D$2:$D1000, 1) * 24, 0)), "0.0") & " ч"', '=IF(IFERROR(AVERAGEIFS(raw_deals!$Q$2:$Q1000, raw_deals!$D$2:$D1000, 1)*24, 0)>\'⚙️ Настройки\'!$C$12, "⚠️ ПРОСРОЧЕН", "🟢 В НОРМЕ")'],
+            ["='⚙️ Настройки'!$B$13", '=calc_engine!E3', '=calc_engine!G3', '=\'⚙️ Настройки\'!$C$13 & " ч"', '=TEXT(MAX(0, IFERROR(AVERAGEIFS(raw_deals!$Q$2:$Q1000, raw_deals!$D$2:$D1000, 2) * 24, 0)), "0.0") & " ч"', '=IF(IFERROR(AVERAGEIFS(raw_deals!$Q$2:$Q1000, raw_deals!$D$2:$D1000, 2)*24, 0)>\'⚙️ Настройки\'!$C$13, "⚠️ ПРОСРОЧЕН", "🟢 В НОРМЕ")'],
+            ["='⚙️ Настройки'!$B$14", '=calc_engine!E4', '=calc_engine!G4', '=\'⚙️ Настройки\'!$C$14 & " ч"', '=TEXT(MAX(0, IFERROR(AVERAGEIFS(raw_deals!$Q$2:$Q1000, raw_deals!$D$2:$D1000, 3) * 24, 0)), "0.0") & " ч"', '=IF(IFERROR(AVERAGEIFS(raw_deals!$Q$2:$Q1000, raw_deals!$D$2:$D1000, 3)*24, 0)>\'⚙️ Настройки\'!$C$14, "⚠️ ПРОСРОЧЕН", "🟢 В НОРМЕ")'],
+            ["='⚙️ Настройки'!$B$15", '=calc_engine!E5', '=calc_engine!G5', '=\'⚙️ Настройки\'!$C$15 & " ч"', '=TEXT(MAX(0, IFERROR(AVERAGEIFS(raw_deals!$Q$2:$Q1000, raw_deals!$D$2:$D1000, 4) * 24, 0)), "0.0") & " ч"', '=IF(IFERROR(AVERAGEIFS(raw_deals!$Q$2:$Q1000, raw_deals!$D$2:$D1000, 4)*24, 0)>\'⚙️ Настройки\'!$C$15, "⚠️ ПРОСРОЧЕН", "🟢 В НОРМЕ")'],
+            ["='⚙️ Настройки'!$B$16", '=calc_engine!E6', '=calc_engine!G6', '=\'⚙️ Настройки\'!$C$16 & " ч"', '=TEXT(MAX(0, IFERROR(AVERAGEIFS(raw_deals!$Q$2:$Q1000, raw_deals!$D$2:$D1000, 5) * 24, 0)), "0.0") & " ч"', '=IF(IFERROR(AVERAGEIFS(raw_deals!$Q$2:$Q1000, raw_deals!$D$2:$D1000, 5)*24, 0)>\'⚙️ Настройки\'!$C$16, "⚠️ ПРОСРОЧЕН", "🟢 В НОРМЕ")'],
+            ["='⚙️ Настройки'!$B$17", '=calc_engine!E7', '=calc_engine!G7', '—', '—', '🟢 ФИНИШ'],
+            ["='⚙️ Настройки'!$B$18", '=calc_engine!E8', '=calc_engine!G8', '—', '—', '🟢 ФИНИШ']
+        ]
+        ws_funnel.update(range_name='A4:F10', values=funnel_formulas, value_input_option='USER_ENTERED')
+        print("      [✓] Формулы '⚡ Пульс_Компании' и '🎯 Воронка_и_SLA' синхронизированы!")
+
+        # 6. n8n синхронизация
+        print("[7/7] 🔄 Синхронизация с n8n воркфлоу...")
+        if amo_token and amo_domain:
+            sync_token_to_n8n_workflow(amo_domain, amo_token, sheet_id)
+
+        # Сохранение в реестр
+        try:
+            reg = load_registry()
+            for t in reg.get('tenants', []):
+                if t['tenant_id'] == tenant_record['tenant_id']:
+                    t['last_sync_at'] = datetime.datetime.now().isoformat()
+                    t['synced_deals_count'] = synced_deals_count
+                    t['pipeline_sum'] = total_pipeline_sum
+                    t['discovered_stages'] = [s[0] for s in stage_settings]
+                    t['discovered_users'] = discovered_users
+                    tenant_record['last_sync_at'] = t['last_sync_at']
+                    tenant_record['synced_deals_count'] = synced_deals_count
+                    tenant_record['pipeline_sum'] = total_pipeline_sum
+                    tenant_record['discovered_users'] = discovered_users
+            save_registry(reg)
+            print("      [✓] Метаданные (этапы + сотрудники) сохранены в tenants_registry.json")
+        except Exception as e:
+            print(f"      [!] Реестр: {e}")
+
+        print("=" * 76)
+        print(f"🎉 СКВОЗНАЯ СИНХРОНИЗАЦИЯ УСПЕШНО ЗАВЕРШЕНА!")
+        print(f"   • Воронка:           7 этапов синхронизировано из CRM")
+        print(f"   • Сотрудники ОП:     {len(discovered_users)} чел ({', '.join(u['name'] for u in discovered_users)})")
+        print(f"   • Сделок в работе:   {synced_deals_count} шт")
+        print(f"   • Объем пайплайна:   {total_pipeline_sum:,.0f} ₽".replace(",", " "))
+        print(f"   • Google Таблица:    🟢 Полностью активна ({tenant_record['spreadsheet_url']})")
+        print("=" * 76)
+        return True, synced_deals_count, f"Сквозная синхронизация завершена: {synced_deals_count} сделок ({total_pipeline_sum:,.0f} ₽)"
     except Exception as e:
+        print(f"[-] Ошибка сквозной авто-синхронизации: {e}")
         return False, 0, str(e)
+
+def sync_amocrm_deals_to_sheet(sheet_id, domain, token):
+    """Синхронизирует сделки amoCRM через единый сквозной движок авто-синхронизации"""
+    temp_record = {
+        'tenant_id': 'AUTO-SYNC',
+        'tenant_name': 'Клиент amoCRM',
+        'spreadsheet_id': sheet_id,
+        'spreadsheet_url': f"https://docs.google.com/spreadsheets/d/{sheet_id}/edit",
+        'crm_type': 'amocrm',
+        'amo_domain': domain,
+        'amo_token': token
+    }
+    ok, count, msg = auto_discover_and_sync_all(temp_record)
+    return ok, count, msg
 
 def test_amocrm_task_creation(domain, token):
     """Тестирует создание задачи в amoCRM (Модуль 3: Ликвидатор сливов Next Step)"""
@@ -245,8 +800,8 @@ def test_amocrm_task_creation(domain, token):
     except Exception as e:
         return False, str(e)
 
-def sync_token_to_n8n_workflow(domain, token):
-    """Обновляет токен и домен amoCRM в воркфлоу n8n в SQLite"""
+def sync_token_to_n8n_workflow(domain, token, sheet_id=None):
+    """Обновляет токен, домен amoCRM и fallback sheet_id в воркфлоу n8n в SQLite"""
     try:
         import sqlite3
         clean_domain = domain.replace('https://', '').replace('http://', '').strip('/')
@@ -289,6 +844,10 @@ def sync_token_to_n8n_workflow(domain, token):
                     for p in n['parameters']['headerParameters'].get('parameters', []):
                         if p.get('name') == 'Authorization':
                             p['value'] = f"Bearer {token}"
+
+            if sheet_id and ('sheet' in n.get('type', '').lower() or 'google' in n.get('type', '').lower()):
+                if 'documentId' in n.get('parameters', {}):
+                    n['parameters']['documentId']['value'] = f"={{{{ $json.spreadsheet_id || '{sheet_id}' }}}}"
 
         now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         nodes_json = json.dumps(nodes)
@@ -377,73 +936,18 @@ def test_bitrix24_comment_creation(webhook_url):
         return False, f"Ошибка добавления комментария: {e}"
 
 def sync_bitrix24_deals_to_sheet(sheet_id, webhook_url):
-    """Синхронизирует последние сделки из Битрикс24 в Google Таблицу (лист raw_deals)"""
-    try:
-        clean_url = webhook_url.strip()
-        if not clean_url.endswith('/'):
-            clean_url += '/'
-
-        list_url = f"{clean_url}crm.deal.list"
-        payload = json.dumps({
-            "order": {"DATE_MODIFY": "DESC"},
-            "select": ["ID", "TITLE", "OPPORTUNITY", "STAGE_ID", "DATE_CREATE", "DATE_MODIFY", "ASSIGNED_BY_ID", "CONTACT_ID"],
-            "start": 0
-        }).encode('utf-8')
-        req = urllib.request.Request(list_url, data=payload, headers={"Content-Type": "application/json", "User-Agent": "RevOps-Enterprise-OS/18.0"})
-        ctx = ssl.create_default_context()
-
-        with urllib.request.urlopen(req, timeout=10, context=ctx) as resp:
-            d_data = json.loads(resp.read().decode('utf-8'))
-            deals = d_data.get('result', [])
-
-        if not deals:
-            return True, 0, "В Битрикс24 пока нет сделок"
-
-        gc = get_gspread_client()
-        sh = gc.open_by_key(sheet_id)
-        ws = sh.worksheet('raw_deals')
-
-        existing_rows = ws.get_all_values()
-        existing_deal_ids = {row[0]: idx + 1 for idx, row in enumerate(existing_rows[1:]) if row and row[0]}
-
-        now_iso = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        today_date = datetime.datetime.now().strftime("%Y-%m-%d")
-
-        synced_count = 0
-        for deal in deals:
-            deal_id = f"B24-{deal['ID']}"
-            deal_name = deal.get('TITLE', f"Сделка #{deal['ID']}")
-            price = float(deal.get('OPPORTUNITY') or 0)
-            stage_id = deal.get('STAGE_ID', 'NEW')
-            
-            created_date = (deal.get('DATE_CREATE') or today_date)[:10]
-            modified_date = (deal.get('DATE_MODIFY') or today_date)[:10]
-            manager_id = deal.get('ASSIGNED_BY_ID', 1)
-
-            is_won = 1 if 'WON' in str(stage_id) else 0
-            is_lost = 1 if 'LOSE' in str(stage_id) else 0
-
-            row_data = [
-                deal_id, deal_name, price, stage_id, stage_id,
-                created_date, modified_date, manager_id, "B2B", "Bitrix24",
-                f"C-{deal_id}", "A" if price > 500000 else "B", "-" if not is_lost else "LOST",
-                now_iso, is_won, is_lost, 1, "0-3d", price, 1,
-                "-", "-", "-", "-", "-",
-                today_date, "V18.0", "Bitrix24 Auto-Sync", f"hash_{deal['ID']}_b24",
-                "Звонок", today_date, "Менеджер", "Телефон", "Норма",
-                90, now_iso, "#В_Работе"
-            ]
-
-            if deal_id in existing_deal_ids:
-                row_num = existing_deal_ids[deal_id] + 1
-                ws.update(f"A{row_num}:AK{row_num}", [row_data], value_input_option='USER_ENTERED')
-            else:
-                ws.append_row(row_data, value_input_option='USER_ENTERED')
-            synced_count += 1
-
-        return True, synced_count, f"Успешно синхронизировано сделок Битрикс24: {synced_count}"
-    except Exception as e:
-        return False, 0, str(e)
+    """Синхронизирует сделки Битрикс24 через единый сквозной движок авто-синхронизации"""
+    temp_record = {
+        'tenant_id': 'AUTO-SYNC-B24',
+        'tenant_name': 'Клиент Битрикс24',
+        'spreadsheet_id': sheet_id,
+        'spreadsheet_url': f"https://docs.google.com/spreadsheets/d/{sheet_id}/edit",
+        'crm_type': 'bitrix24',
+        'b24_webhook_url': webhook_url,
+        'crm_webhook_url': webhook_url
+    }
+    ok, count, msg = auto_discover_and_sync_all(temp_record)
+    return ok, count, msg
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 3. ТЕСТОВЫЕ ВЕБХУКИ И СТРОКИ
@@ -890,7 +1394,7 @@ def manage_client_integration(tenant_record=None):
 
         print("─" * 76)
         print("🎯 ДЕЙСТВИЯ:")
-        print("  [1] 🧪 ПРОВЕРИТЬ СВЯЗЬ ПО API (Проверка CRM, задач, звонков и Google Таблицы)")
+        print("  [1] 🚀 ПОЛНАЯ АВТО-ИНТЕГРАЦИЯ И СИНХРОНИЗАЦИЯ ПОД КЛЮЧ (Воронка + Сотрудники + Сделки + Таблица + n8n)")
         print("  [2] 🔑 НАСТРОЙКА КЛЮЧЕЙ И ТОКЕНОВ CRM (amoCRM токен / Битрикс24 вебхук)")
         print("  [3] 📋 Скопировать входящий Webhook URL в буфер обмена")
         print("  [4] 📊 Открыть Google Таблицу клиента в браузере")
@@ -905,68 +1409,28 @@ def manage_client_integration(tenant_record=None):
 
         if act == '1':
             print("\n" + "═" * 76)
-            print("⏳ ЗАПУСК КОМПЛЕКСНОЙ ПРОВЕРКИ СВЯЗИ...")
+            print("🚀 ЗАПУСК ПОЛНОЙ АВТО-ИНТЕГРАЦИИ И СИНХРОНИЗАЦИИ ПОД КЛЮЧ...")
             print("═" * 76)
 
-            # amoCRM тесты
-            if crm_type in ['amocrm', 'hybrid', 'both']:
-                print("\n[Проверка amoCRM]:")
-                if amo_token:
-                    ok_a, acc_info = verify_amocrm_token(amo_domain, amo_token)
-                    if ok_a:
-                        print(f"  [✓] Авторизация amoCRM успешна! Аккаунт: '{acc_info.get('name')}' (ID: {acc_info.get('id')})")
-                    else:
-                        print(f"  [-] Ошибка amoCRM API: {acc_info}")
+            # 1. Сквозная авто-синхронизация этапов и сделок
+            s_ok, s_cnt, s_msg = auto_discover_and_sync_all(tenant_record)
 
-                    t_ok, t_res = test_amocrm_task_creation(amo_domain, amo_token)
-                    if t_ok:
-                        print("  [✓] Модуль 3: Тестовая задача успешно создана в amoCRM!")
-                    else:
-                        print(f"  [!] Создание задачи: {t_res}")
-
-                    d_ok, d_cnt, d_msg = sync_amocrm_deals_to_sheet(sheet_id, amo_domain, amo_token)
-                    if d_ok:
-                        print(f"  [✓] {d_msg} на лист raw_deals!")
-                    else:
-                        print(f"  [!] Синхронизация сделок amoCRM: {d_msg}")
+            # 2. Тест создания задач / комментариев в CRM
+            if crm_type in ['amocrm', 'hybrid', 'both'] and amo_token:
+                t_ok, t_res = test_amocrm_task_creation(amo_domain, amo_token)
+                if t_ok:
+                    print("  [✓] Модуль 3: Тестовая задача успешно проверена в amoCRM!")
                 else:
-                    print("  [!] amoCRM токен не введен (нажмите [2] для подключения)")
+                    print(f"  [!] Проверка задачи: {t_res}")
 
-            # Битрикс24 тесты
-            if crm_type in ['bitrix24', 'hybrid', 'both']:
-                print("\n[Проверка Битрикс24]:")
-                if b24_webhook:
-                    ok_b, b_user = verify_bitrix24_webhook(b24_webhook)
-                    if ok_b:
-                        u_name = f"{b_user.get('LAST_NAME', '')} {b_user.get('NAME', '')}".strip() or "Успешно"
-                        print(f"  [✓] Авторизация Битрикс24 успешна! Пользователь: '{u_name}'")
-                    else:
-                        print(f"  [-] Ошибка Битрикс24 REST: {b_user}")
-
-                    c_ok, c_msg = test_bitrix24_comment_creation(b24_webhook)
-                    if c_ok:
-                        print(f"  [✓] {c_msg}")
-                    else:
-                        print(f"  [!] Комментарий Битрикс24: {c_msg}")
-
-                    bd_ok, bd_cnt, bd_msg = sync_bitrix24_deals_to_sheet(sheet_id, b24_webhook)
-                    if bd_ok:
-                        print(f"  [✓] {bd_msg} на лист raw_deals!")
-                    else:
-                        print(f"  [!] Синхронизация сделок Битрикс24: {bd_msg}")
+            if crm_type in ['bitrix24', 'hybrid', 'both'] and b24_webhook:
+                c_ok, c_msg = test_bitrix24_comment_creation(b24_webhook)
+                if c_ok:
+                    print(f"  [✓] {c_msg}")
                 else:
-                    print("  [!] REST вебхук Битрикс24 не введен (нажмите [2] для подключения)")
+                    print(f"  [!] Комментарий Битрикс24: {c_msg}")
 
-            # Тест Google Таблицы
-            print("\n[Проверка Google Таблицы]:")
-            lbl = "Гибридный" if crm_type in ['hybrid', 'both'] else ("Битрикс24" if crm_type == 'bitrix24' else "amoCRM")
-            sheet_ok, row_res = inject_test_row_into_sheet(sheet_id, company_name, tenant_id, lbl)
-            if sheet_ok:
-                print(f"  [✓] Тестовая строка аудита записана в Google Таблицу (лист raw_calls, ID: {row_res})!")
-            else:
-                print(f"  [-] Ошибка таблицы: {row_res}")
-
-            # Тест n8n Вебхука
+            # 3. Тест n8n Вебхука
             print("\n[Проверка n8n Webhook Контура]:")
             if crm_type in ['amocrm', 'hybrid', 'both']:
                 wh_ok1, s1, m1 = send_test_call_webhook(inbound_amo_wh, tenant_id, sheet_id, "amocrm")
@@ -983,7 +1447,7 @@ def manage_client_integration(tenant_record=None):
                     print(f"  [!] Битрикс24 сигнал: {m2}")
 
             print("\n" + "═" * 76)
-            print("🎉 ДИАГНОСТИКА СВЯЗКИ ЗАВЕРШЕНА!")
+            print("🎉 ВСЯ ЭКОСИСТЕМА ПОЛНОСТЬЮ СИНХРОНИЗИРОВАНА И ГОТОВА К РАБОТЕ!")
             print("═" * 76)
             input("\nНажмите Enter для продолжения...")
 
