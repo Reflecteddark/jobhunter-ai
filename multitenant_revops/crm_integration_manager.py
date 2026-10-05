@@ -9,43 +9,60 @@ import time
 import json
 import re
 import urllib.request
+import urllib.error
 import ssl
 import webbrowser
 import datetime
+from pathlib import Path
 from google.oauth2.service_account import Credentials
 import gspread
 
 if sys.stdout.encoding != 'utf-8':
     try:
         sys.stdout.reconfigure(encoding='utf-8')
-    except:
+    except (UnicodeEncodeError, AttributeError):
         pass
 
 if sys.stdin.encoding != 'utf-8':
     try:
         sys.stdin.reconfigure(encoding='utf-8')
-    except:
+    except (UnicodeEncodeError, AttributeError):
         pass
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-SERVICE_ACCOUNT_FILE = os.path.join(BASE_DIR, '..', '..', 'service_account.json')
-if not os.path.exists(SERVICE_ACCOUNT_FILE):
-    SERVICE_ACCOUNT_FILE = os.path.join(r'C:\Users\strel\.gemini\antigravity\scratch', 'service_account.json')
+HOME_DIR = Path.home()
+BASE_DIR = Path(__file__).resolve().parent
 
-REGISTRY_FILE = os.path.join(BASE_DIR, 'tenants_registry.json')
-OTHER_REGISTRY_FILE = (
-    r"C:\Users\strel\.gemini\antigravity\scratch\revops-enterprise-os\multitenant_revops\tenants_registry.json"
-    if "jobhunter-ai" in BASE_DIR else
-    r"C:\Users\strel\.gemini\antigravity\scratch\jobhunter-ai\multitenant_revops\tenants_registry.json"
-)
+# C1: Динамический кроссплатформенный поиск service_account.json
+def find_service_account() -> str:
+    env_sa = os.getenv("REVOPS_SA_FILE")
+    if env_sa and os.path.exists(env_sa):
+        return os.path.abspath(env_sa)
+    candidates = [
+        BASE_DIR / "service_account.json",
+        BASE_DIR.parent / "service_account.json",
+        BASE_DIR.parent.parent / "service_account.json",
+        HOME_DIR / ".gemini" / "antigravity" / "scratch" / "service_account.json",
+        HOME_DIR / "service_account.json"
+    ]
+    for c in candidates:
+        if c.exists():
+            return str(c.resolve())
+    return str((BASE_DIR.parent.parent / "service_account.json").resolve())
 
-# Tunnel Manager import
+SERVICE_ACCOUNT_FILE = find_service_account()
+REGISTRY_FILE = str(BASE_DIR / "tenants_registry.json")
+
+# Tunnel Manager import с безопасным fallback
 try:
-    scratch_dir = r"C:\Users\strel\.gemini\antigravity\scratch"
-    if scratch_dir not in sys.path:
+    scratch_dir = os.getenv("REVOPS_SCRATCH", str(HOME_DIR / ".gemini" / "antigravity" / "scratch"))
+    if os.path.exists(scratch_dir) and scratch_dir not in sys.path:
         sys.path.append(scratch_dir)
     from tunnel_manager import get_active_tunnel_url, is_cloudflared_running, start_tunnel
-except:
+except ImportError:
+    def get_active_tunnel_url(): return "http://localhost:5678"
+    def is_cloudflared_running(): return False
+    def start_tunnel(): return None
+except Exception as e:
     def get_active_tunnel_url(): return "http://localhost:5678"
     def is_cloudflared_running(): return False
     def start_tunnel(): return None
@@ -58,28 +75,29 @@ def load_registry():
         try:
             with open(REGISTRY_FILE, 'r', encoding='utf-8') as f:
                 return json.load(f)
-        except:
-            pass
+        except Exception as e:
+            print(f"[!] Ошибка чтения реестра {REGISTRY_FILE}: {e}")
     return {"tenants": []}
 
 def save_registry(data):
-    for fpath in [REGISTRY_FILE, OTHER_REGISTRY_FILE]:
-        try:
-            os.makedirs(os.path.dirname(fpath), exist_ok=True)
-            with open(fpath, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-        except:
-            pass
+    """C2: Атомарное сохранение локального реестра без cross-project мутаций"""
+    try:
+        os.makedirs(os.path.dirname(REGISTRY_FILE), exist_ok=True)
+        tmp_file = REGISTRY_FILE + ".tmp"
+        with open(tmp_file, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        os.replace(tmp_file, REGISTRY_FILE)
+    except Exception as e:
+        print(f"[!] Не удалось сохранить реестр {REGISTRY_FILE}: {e}")
+        raise
 
 def get_gspread_client():
-    with open(SERVICE_ACCOUNT_FILE, 'r', encoding='utf-8') as f:
-        sa = json.load(f)
-    creds = Credentials.from_service_account_info({
-        'type': 'service_account',
-        'client_email': sa['email'],
-        'private_key': sa['privateKey'],
-        'token_uri': 'https://oauth2.googleapis.com/token'
-    }, scopes=['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive'])
+    if not os.path.exists(SERVICE_ACCOUNT_FILE):
+        raise FileNotFoundError(f"service_account.json не найден: {SERVICE_ACCOUNT_FILE}")
+    creds = Credentials.from_service_account_file(
+        SERVICE_ACCOUNT_FILE,
+        scopes=['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
+    )
     return gspread.authorize(creds)
 
 def check_n8n_status():
@@ -87,7 +105,11 @@ def check_n8n_status():
         with urllib.request.urlopen("http://localhost:5678/healthz", timeout=2) as resp:
             if resp.status == 200:
                 return True, "🟢 n8n Активен (localhost:5678)"
-    except:
+    except urllib.error.HTTPError as e:
+        if e.code in (401, 403):
+            return True, f"🟡 n8n Требует авторизации (HTTP {e.code})"
+        return False, f"🔴 n8n Ошибка HTTP {e.code}"
+    except Exception:
         pass
     return False, "🔴 n8n Остановлен (порт 5678 не отвечает)"
 
@@ -98,39 +120,148 @@ def print_header(title="ИНТЕГРАЦИЯ CRM ➔ n8n ➔ GOOGLE ТАБЛИЦ
     print("╚" + "═" * 74 + "╝\n")
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 1. amoCRM ИНТЕГРАЦИЯ
+# ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ САНИТИЗАЦИИ И ПАГИНАЦИИ CRM
 # ─────────────────────────────────────────────────────────────────────────────
-def verify_amocrm_token(domain, token):
-    """Проверяет валидность долгосрочного токена amoCRM через GET /api/v4/account"""
-    clean_domain = domain.replace('https://', '').replace('http://', '').strip('/')
-    if not clean_domain.endswith('.amocrm.ru'):
-        clean_domain = f"{clean_domain}.amocrm.ru"
-    url = f"https://{clean_domain}/api/v4/account"
-    req = urllib.request.Request(url, headers={
-        "Authorization": f"Bearer {token.strip()}",
-        "Content-Type": "application/json",
-        "User-Agent": "RevOps-Enterprise-OS/18.0"
-    })
-    ctx = ssl.create_default_context()
-    try:
-        with urllib.request.urlopen(req, timeout=10, context=ctx) as resp:
-            data = json.loads(resp.read().decode('utf-8'))
-            return True, data
-    except urllib.error.HTTPError as e:
-        body = e.read().decode('utf-8', errors='ignore')
-        return False, f"HTTP Error {e.code}: {body[:200]}"
-    except Exception as e:
-        return False, str(e)
-
 def clean_stage_name(raw_name: str) -> str:
-    cleaned = re.sub(r'^\d+[\.\s\-]+', '', str(raw_name).strip()).strip()
+    """m3: Срезает только ведущие номера 1-2 цифр (напр. '1. ', '02 - '), сохраняя '2026-План'"""
+    cleaned = re.sub(r'^\d{1,2}[\.\s\-]+', '', str(raw_name).strip()).strip()
     return cleaned or str(raw_name).strip()
 
+DANGEROUS_FORMULA_PREFIXES = ('=', '+', '@')
+
 def sanitize_sheet_val(val):
-    """Предотвращает CSV/Formula Injection при записи в Google Таблицы"""
-    if isinstance(val, str) and val and val[0] in ('=', '+', '-', '@', '\t', '\r'):
-        return "'" + val
+    """M3: Предотвращает Formula Injection, сохраняя дефисы '-' и отрицательные числа"""
+    if isinstance(val, str) and val:
+        if val in ('-', '—', '–'):
+            return val
+        if val[0] in DANGEROUS_FORMULA_PREFIXES:
+            return "'" + val
     return val
+
+# C4: Пагинаторы выгрузки 100% базы CRM
+# C4: Пагинаторы выгрузки 100% базы CRM
+def fetch_all_amocrm_leads(clean_domain: str, token: str, ctx: ssl.SSLContext = None, max_pages: int = 40) -> list:
+    """C4: Выгружает ВСЕ сделки из amoCRM с постраничной навигацией (до 250 на страницу)"""
+    if ctx is None:
+        ctx = ssl.create_default_context()
+    leads = []
+    page = 1
+    while page <= max_pages:
+        url = f"https://{clean_domain}/api/v4/leads?with=contacts&limit=250&page={page}"
+        req = urllib.request.Request(url, headers={
+            "Authorization": f"Bearer {token.strip()}",
+            "User-Agent": "RevOps-Enterprise-OS/18.0"
+        })
+        try:
+            with urllib.request.urlopen(req, timeout=15, context=ctx) as resp:
+                data = json.loads(resp.read().decode('utf-8'))
+            batch = data.get('_embedded', {}).get('leads', [])
+            if not batch:
+                break
+            leads.extend(batch)
+            if not data.get('_links', {}).get('next'):
+                break
+            page += 1
+        except urllib.error.HTTPError as e:
+            if e.code == 204:
+                break
+            print(f"      [!] amoCRM сделки (стр. {page}) HTTP {e.code}")
+            break
+        except Exception as e:
+            print(f"      [!] amoCRM сделки (стр. {page}) ошибка: {e}")
+            break
+    return leads
+
+def fetch_all_amocrm_contacts_map(clean_domain: str, token: str, ctx: ssl.SSLContext = None, max_pages: int = 20) -> dict:
+    """C4: Выгружает контакты с пагинацией и формирует словарь {contact_id: name}"""
+    if ctx is None:
+        ctx = ssl.create_default_context()
+    contacts_map = {}
+    page = 1
+    while page <= max_pages:
+        url = f"https://{clean_domain}/api/v4/contacts?limit=250&page={page}"
+        req = urllib.request.Request(url, headers={
+            "Authorization": f"Bearer {token.strip()}",
+            "User-Agent": "RevOps-Enterprise-OS/18.0"
+        })
+        try:
+            with urllib.request.urlopen(req, timeout=15, context=ctx) as resp:
+                data = json.loads(resp.read().decode('utf-8'))
+            batch = data.get('_embedded', {}).get('contacts', [])
+            if not batch:
+                break
+            for c in batch:
+                contacts_map[c['id']] = c.get('name', 'Клиент')
+            if not data.get('_links', {}).get('next'):
+                break
+            page += 1
+        except urllib.error.HTTPError as e:
+            if e.code == 204:
+                break
+            break
+        except Exception:
+            break
+    return contacts_map
+
+def fetch_all_b24_deals(clean_url: str, ctx: ssl.SSLContext = None, max_batches: int = 40, max_pages: int = None) -> list:
+    """C4: Выгружает ВСЕ сделки из Битрикс24 с постраничной навигацией start=next"""
+    if ctx is None:
+        ctx = ssl.create_default_context()
+    if max_pages is not None:
+        max_batches = max_pages
+    deals = []
+    start = 0
+    batches = 0
+    while batches < max_batches:
+        batches += 1
+        list_url = f"{clean_url}crm.deal.list"
+        payload = json.dumps({
+            "order": {"DATE_MODIFY": "DESC"},
+            "select": ["ID", "TITLE", "OPPORTUNITY", "STAGE_ID", "DATE_CREATE", "DATE_MODIFY", "ASSIGNED_BY_ID"],
+            "start": start
+        }).encode('utf-8')
+        req = urllib.request.Request(list_url, data=payload, headers={"Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=15, context=ctx) as resp:
+                data = json.loads(resp.read().decode('utf-8'))
+            batch = data.get('result', [])
+            if not batch:
+                break
+            deals.extend(batch)
+            if data.get('next') is None:
+                break
+            start = data['next']
+        except Exception as e:
+            print(f"      [!] Bitrix24 сделки (пакет {batches}) ошибка: {e}")
+            break
+    return deals
+
+def fetch_all_b24_users(clean_url: str, ctx: ssl.SSLContext = None, max_batches: int = 10, max_pages: int = None) -> list:
+    """C4: Выгружает пользователей из Битрикс24 с пагинацией start=next"""
+    if ctx is None:
+        ctx = ssl.create_default_context()
+    if max_pages is not None:
+        max_batches = max_pages
+    users = []
+    start = 0
+    batches = 0
+    while batches < max_batches:
+        batches += 1
+        users_url = f"{clean_url}user.get?ACTIVE=Y&start={start}"
+        req = urllib.request.Request(users_url)
+        try:
+            with urllib.request.urlopen(req, timeout=15, context=ctx) as resp:
+                data = json.loads(resp.read().decode('utf-8'))
+            batch = data.get('result', [])
+            if not batch:
+                break
+            users.extend(batch)
+            if data.get('next') is None:
+                break
+            start = data['next']
+        except Exception:
+            break
+    return users
 
 def discover_crm_stages_and_mapping(crm_type, amo_domain, amo_token, b24_webhook_url):
     """
@@ -433,15 +564,22 @@ def auto_discover_and_sync_all(tenant_record):
         print("[3/7] ⚙️ Синхронизация листа '⚙️ Настройки' (Этапы + Сотрудники + RBAC)...")
         ws_settings = sh.worksheet('⚙️ Настройки')
         existing_settings = ws_settings.get('C12:D18')
+        def_win = [0.10, 0.35, 0.60, 0.85, 0.95, 1.00, 0.00]
         for idx, row in enumerate(existing_settings):
+            if idx >= len(stage_settings):
+                break
             if row and len(row) >= 1 and str(row[0]).strip().isdigit():
                 stage_settings[idx][1] = int(row[0])
             if row and len(row) >= 2:
                 try:
                     val = float(str(row[1]).replace(',', '.').replace('%', ''))
-                    if val > 1.0: val /= 100.0
+                    if val > 1.0:
+                        val /= 100.0
+                    if not (0.0 <= val <= 1.0):
+                        print(f"      [!] Win% для этапа {idx+1} ({val:.2f}) вне диапазона [0..1], сброшено к дефолту")
+                        val = def_win[idx]
                     stage_settings[idx][2] = val
-                except:
+                except Exception:
                     pass
 
         ws_settings.update(range_name='B12:D18', values=stage_settings, value_input_option='USER_ENTERED')
@@ -524,8 +662,8 @@ def auto_discover_and_sync_all(tenant_record):
         except Exception as e:
             print(f"      [!] calc_sales: {e}")
 
-        # 4. Синхронизация сделок из CRM в raw_deals
-        print("[5/7] 📥 Загрузка и нормализация сделок в 'raw_deals'...")
+        # 4. Синхронизация сделок из CRM в raw_deals (C4: 100% пагинация базы)
+        print("[5/7] 📥 Загрузка и нормализация сделок в 'raw_deals' (с пагинацией)...")
         ws_deals = sh.worksheet('raw_deals')
         existing_deals = ws_deals.get_all_values()
         existing_deal_ids = {row[0]: idx + 1 for idx, row in enumerate(existing_deals[1:]) if row and row[0]}
@@ -538,28 +676,14 @@ def auto_discover_and_sync_all(tenant_record):
         deals_to_update = []
         deals_to_append = []
 
-        # amoCRM сделки
+        # amoCRM сделки с полной пагинацией
         if crm_type in ['amocrm', 'hybrid', 'both'] and amo_token:
             clean_domain = amo_domain.replace('https://', '').replace('http://', '').strip('/')
             if not clean_domain.endswith('.amocrm.ru'):
                 clean_domain = f"{clean_domain}.amocrm.ru"
 
-            contacts_map = {}
-            try:
-                c_url = f"https://{clean_domain}/api/v4/contacts?limit=50"
-                c_req = urllib.request.Request(c_url, headers={"Authorization": f"Bearer {amo_token.strip()}"})
-                with urllib.request.urlopen(c_req, timeout=10, context=ctx) as resp:
-                    c_data = json.loads(resp.read().decode('utf-8'))
-                    for c in c_data.get('_embedded', {}).get('contacts', []):
-                        contacts_map[c['id']] = c.get('name', 'Клиент')
-            except:
-                pass
-
-            leads_url = f"https://{clean_domain}/api/v4/leads?with=contacts&limit=250"
-            req = urllib.request.Request(leads_url, headers={"Authorization": f"Bearer {amo_token.strip()}"})
-            with urllib.request.urlopen(req, timeout=10, context=ctx) as resp:
-                l_data = json.loads(resp.read().decode('utf-8'))
-                leads = l_data.get('_embedded', {}).get('leads', [])
+            contacts_map = fetch_all_amocrm_contacts_map(clean_domain, amo_token, ctx)
+            leads = fetch_all_amocrm_leads(clean_domain, amo_token, ctx)
 
             for lead in leads:
                 lead_id = str(lead['id'])
@@ -612,22 +736,13 @@ def auto_discover_and_sync_all(tenant_record):
                 if stage_num <= 5:
                     total_pipeline_sum += price
 
-        # Bitrix24 сделки
+        # Bitrix24 сделки с полной пагинацией
         if crm_type in ['bitrix24', 'hybrid', 'both'] and b24_webhook:
             clean_url = b24_webhook.strip()
             if not clean_url.endswith('/'):
                 clean_url += '/'
 
-            list_url = f"{clean_url}crm.deal.list"
-            payload = json.dumps({
-                "order": {"DATE_MODIFY": "DESC"},
-                "select": ["ID", "TITLE", "OPPORTUNITY", "STAGE_ID", "DATE_CREATE", "DATE_MODIFY", "ASSIGNED_BY_ID"],
-                "start": 0
-            }).encode('utf-8')
-            req = urllib.request.Request(list_url, data=payload, headers={"Content-Type": "application/json"})
-            with urllib.request.urlopen(req, timeout=10, context=ctx) as resp:
-                d_data = json.loads(resp.read().decode('utf-8'))
-                b_deals = d_data.get('result', [])
+            b_deals = fetch_all_b24_deals(clean_url, ctx)
 
             for deal in b_deals:
                 deal_id = f"B24-{deal['ID']}"
@@ -679,10 +794,11 @@ def auto_discover_and_sync_all(tenant_record):
         if deals_to_append:
             ws_deals.append_rows(deals_to_append, value_input_option='USER_ENTERED')
 
+        max_format_row = max(500, len(existing_deals) + len(deals_to_append) + 100)
         try:
-            ws_deals.format('C2:C500', {'numberFormat': {'type': 'CURRENCY', 'pattern': '#,##0 ₽'}, 'horizontalAlignment': 'RIGHT'})
-            ws_deals.format('S2:S500', {'numberFormat': {'type': 'CURRENCY', 'pattern': '#,##0 ₽'}, 'horizontalAlignment': 'RIGHT'})
-            ws_deals.format('D2:D500', {'numberFormat': {'type': 'NUMBER', 'pattern': '0'}, 'horizontalAlignment': 'CENTER'})
+            ws_deals.format(f'C2:C{max_format_row}', {'numberFormat': {'type': 'CURRENCY', 'pattern': '#,##0 ₽'}, 'horizontalAlignment': 'RIGHT'})
+            ws_deals.format(f'S2:S{max_format_row}', {'numberFormat': {'type': 'CURRENCY', 'pattern': '#,##0 ₽'}, 'horizontalAlignment': 'RIGHT'})
+            ws_deals.format(f'D2:D{max_format_row}', {'numberFormat': {'type': 'NUMBER', 'pattern': '0'}, 'horizontalAlignment': 'CENTER'})
         except Exception:
             pass
 
@@ -813,49 +929,55 @@ def sync_token_to_n8n_workflow(domain, token, sheet_id=None):
             return False, "n8n database not found"
             
         conn = sqlite3.connect(db_path)
-        c = conn.cursor()
-        row = c.execute("SELECT nodes FROM workflow_entity WHERE id = 'Sh4JkQtMKVdeRJn5'").fetchone()
-        if not row:
+        try:
+            c = conn.cursor()
+            row = c.execute("SELECT nodes FROM workflow_entity WHERE id = 'Sh4JkQtMKVdeRJn5'").fetchone()
+            if not row:
+                return False, "Workflow not found"
+                
+            nodes = json.loads(row[0])
+            for n in nodes:
+                params = n.get('parameters', {})
+                if n['name'] == 'HTTP Request':
+                    params['url'] = f"=https://{clean_domain}/api/v4/events?filter[type]=lead_added,lead_status_changed,common_note_added,call_in,call_out"
+                    if 'headerParameters' in params:
+                        for p in params['headerParameters'].get('parameters', []):
+                            if p.get('name') == 'Authorization':
+                                p['value'] = f"Bearer {token}"
+                elif n['name'] == 'HTTP Request1':
+                    params['url'] = f"=https://{clean_domain}/api/v4/{{{{ $json.entity_type || 'leads' }}}}/{{{{ $json.entity_id }}}}/notes/{{{{ $json.value_after[0].note.id }}}}"
+                    if 'headerParameters' in params:
+                        for p in params['headerParameters'].get('parameters', []):
+                            if p.get('name') == 'Authorization':
+                                p['value'] = f"Bearer {token}"
+                elif n['name'] == 'Check Existing Notes':
+                    params['url'] = f"=https://{clean_domain}/api/v4/{{{{ $json.entity_type || 'leads' }}}}/{{{{ $json.lead_id }}}}/notes?limit=50&order[created_at]=desc"
+                    if 'headerParameters' in params:
+                        for p in params['headerParameters'].get('parameters', []):
+                            if p.get('name') == 'Authorization':
+                                p['value'] = f"Bearer {token}"
+                elif n['name'] == 'Add AmoCRM Note':
+                    if 'headerParameters' in params:
+                        for p in params['headerParameters'].get('parameters', []):
+                            if p.get('name') == 'Authorization':
+                                p['value'] = f"Bearer {token}"
+
+                if sheet_id and ('sheet' in n.get('type', '').lower() or 'google' in n.get('type', '').lower()):
+                    doc = params.get('documentId')
+                    val_expr = f"={{{{ $json.spreadsheet_id || '{sheet_id}' }}}}"
+                    if isinstance(doc, dict):
+                        doc['value'] = val_expr
+                    elif isinstance(doc, str):
+                        params['documentId'] = val_expr
+
+            now_str = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+            nodes_json = json.dumps(nodes)
+            with conn:
+                conn.execute("UPDATE workflow_entity SET nodes = ?, updatedAt = ? WHERE id = 'Sh4JkQtMKVdeRJn5'", (nodes_json, now_str))
+                conn.execute("UPDATE workflow_history SET nodes = ?, updatedAt = ? WHERE workflowId = 'Sh4JkQtMKVdeRJn5'", (nodes_json, now_str))
+            return True, "Успешно синхронизировано в n8n"
+        finally:
             conn.close()
-            return False, "Workflow not found"
-            
-        nodes = json.loads(row[0])
-        for n in nodes:
-            if n['name'] == 'HTTP Request':
-                n['parameters']['url'] = f"=https://{clean_domain}/api/v4/events?filter[type]=lead_added,lead_status_changed,common_note_added,call_in,call_out"
-                if 'headerParameters' in n['parameters']:
-                    for p in n['parameters']['headerParameters'].get('parameters', []):
-                        if p.get('name') == 'Authorization':
-                            p['value'] = f"Bearer {token}"
-            elif n['name'] == 'HTTP Request1':
-                n['parameters']['url'] = f"=https://{clean_domain}/api/v4/{{{{ $json.entity_type || 'leads' }}}}/{{{{ $json.entity_id }}}}/notes/{{{{ $json.value_after[0].note.id }}}}"
-                if 'headerParameters' in n['parameters']:
-                    for p in n['parameters']['headerParameters'].get('parameters', []):
-                        if p.get('name') == 'Authorization':
-                            p['value'] = f"Bearer {token}"
-            elif n['name'] == 'Check Existing Notes':
-                n['parameters']['url'] = f"=https://{clean_domain}/api/v4/{{{{ $json.entity_type || 'leads' }}}}/{{{{ $json.lead_id }}}}/notes?limit=50&order[created_at]=desc"
-                if 'headerParameters' in n['parameters']:
-                    for p in n['parameters']['headerParameters'].get('parameters', []):
-                        if p.get('name') == 'Authorization':
-                            p['value'] = f"Bearer {token}"
-            elif n['name'] == 'Add AmoCRM Note':
-                if 'headerParameters' in n['parameters']:
-                    for p in n['parameters']['headerParameters'].get('parameters', []):
-                        if p.get('name') == 'Authorization':
-                            p['value'] = f"Bearer {token}"
-
-            if sheet_id and ('sheet' in n.get('type', '').lower() or 'google' in n.get('type', '').lower()):
-                if 'documentId' in n.get('parameters', {}):
-                    n['parameters']['documentId']['value'] = f"={{{{ $json.spreadsheet_id || '{sheet_id}' }}}}"
-
-        now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        nodes_json = json.dumps(nodes)
-        c.execute("UPDATE workflow_entity SET nodes = ?, updatedAt = ? WHERE id = 'Sh4JkQtMKVdeRJn5'", (nodes_json, now_str))
-        c.execute("UPDATE workflow_history SET nodes = ?, updatedAt = ? WHERE workflowId = 'Sh4JkQtMKVdeRJn5'", (nodes_json, now_str))
-        conn.commit()
-        conn.close()
-        return True, "Успешно синхронизировано в n8n"
     except Exception as e:
         return False, str(e)
 
@@ -912,8 +1034,8 @@ def test_bitrix24_comment_creation(webhook_url):
             if deals:
                 deal_id = deals[0]['ID']
                 deal_title = deals[0].get('TITLE', f'Сделка #{deal_id}')
-    except:
-        pass
+    except Exception as e_deal:
+        deal_id = None
 
     if not deal_id:
         return True, "Связь с Битрикс24 активна (но сделок для добавления комментария пока нет)"
@@ -1077,8 +1199,8 @@ def switch_tenant_crm(tenant_record):
     try:
         from tenant_provisioner import create_client_passport
         create_client_passport(tenant_record)
-    except:
-        pass
+    except Exception as e_pass:
+        print(f"      [!] Не удалось обновить паспорт: {e_pass}")
 
     print(f"\n[✓] Режим CRM успешно переключен на: {new_crm.upper()}!")
 
@@ -1333,7 +1455,7 @@ def manage_client_integration(tenant_record=None):
                 tenant_record = tenants[sel_idx]
             else:
                 return
-        except:
+        except ValueError:
             return
 
     while True:
@@ -1415,20 +1537,24 @@ def manage_client_integration(tenant_record=None):
             # 1. Сквозная авто-синхронизация этапов и сделок
             s_ok, s_cnt, s_msg = auto_discover_and_sync_all(tenant_record)
 
-            # 2. Тест создания задач / комментариев в CRM
-            if crm_type in ['amocrm', 'hybrid', 'both'] and amo_token:
-                t_ok, t_res = test_amocrm_task_creation(amo_domain, amo_token)
-                if t_ok:
-                    print("  [✓] Модуль 3: Тестовая задача успешно проверена в amoCRM!")
-                else:
-                    print(f"  [!] Проверка задачи: {t_res}")
+            # 2. Тест создания задач / комментариев в CRM (опционально, чтобы не засорять живую CRM)
+            test_prompt = input("\n👉 Отправить тестовую задачу/комментарий в CRM для проверки связи? [y/N]: ").strip().lower()
+            if test_prompt in ['y', 'yes', 'д', 'да']:
+                if crm_type in ['amocrm', 'hybrid', 'both'] and amo_token:
+                    t_ok, t_res = test_amocrm_task_creation(amo_domain, amo_token)
+                    if t_ok:
+                        print("  [✓] Модуль 3: Тестовая задача успешно проверена в amoCRM!")
+                    else:
+                        print(f"  [!] Проверка задачи: {t_res}")
 
-            if crm_type in ['bitrix24', 'hybrid', 'both'] and b24_webhook:
-                c_ok, c_msg = test_bitrix24_comment_creation(b24_webhook)
-                if c_ok:
-                    print(f"  [✓] {c_msg}")
-                else:
-                    print(f"  [!] Комментарий Битрикс24: {c_msg}")
+                if crm_type in ['bitrix24', 'hybrid', 'both'] and b24_webhook:
+                    c_ok, c_msg = test_bitrix24_comment_creation(b24_webhook)
+                    if c_ok:
+                        print(f"  [✓] {c_msg}")
+                    else:
+                        print(f"  [!] Комментарий Битрикс24: {c_msg}")
+            else:
+                print("  [i] Отправка тестовых задач/комментариев в CRM пропущена (боевой таймлайн сделок сохранен в чистоте).")
 
             # 3. Тест n8n Вебхука
             print("\n[Проверка n8n Webhook Контура]:")
@@ -1457,13 +1583,15 @@ def manage_client_integration(tenant_record=None):
         elif act == '3':
             # Копирование вебхука в буфер
             target_url = inbound_b24_wh if crm_type == 'bitrix24' else inbound_amo_wh
-            try:
-                import subprocess
-                proc = subprocess.Popen('clip', stdin=subprocess.PIPE, shell=True)
-                proc.communicate(target_url.encode('utf-16le'))
-                print("\n[✓] Webhook URL успешно скопирован в буфер обмена (Ctrl+V)!")
-            except:
-                print(f"\n[!] Скопируйте ссылку вручную: {target_url}")
+            if os.name == 'nt':
+                try:
+                    import subprocess
+                    subprocess.run(['clip'], input=target_url.encode('utf-16le'), check=True)
+                    print("\n[✓] Webhook URL успешно скопирован в буфер обмена (Ctrl+V)!")
+                except Exception as clip_err:
+                    print(f"\n[!] Не удалось скопировать в буфер: {clip_err}. Скопируйте ссылку вручную: {target_url}")
+            else:
+                print(f"\n[i] Webhook URL: {target_url}")
             time.sleep(1.5)
 
         elif act == '4':
@@ -1478,11 +1606,17 @@ def manage_client_integration(tenant_record=None):
 
         elif act == '6':
             clean_name = re.sub(r'[\/:*?"<>|]', '_', company_name)
-            client_path = os.path.join(r"C:\Users\strel\Desktop\RevOps Platform\Клиенты", clean_name)
-            if os.path.exists(client_path):
-                os.startfile(client_path)
+            clients_root = Path(os.getenv("REVOPS_CLIENTS_DIR", Path.home() / "Desktop" / "RevOps Platform" / "Клиенты"))
+            client_path = clients_root / clean_name
+            target_open = client_path if client_path.exists() else clients_root
+            if target_open.exists():
+                if hasattr(os, 'startfile'):
+                    os.startfile(str(target_open))
+                else:
+                    import subprocess
+                    subprocess.run(['xdg-open', str(target_open)], check=False)
             else:
-                os.startfile(r"C:\Users\strel\Desktop\RevOps Platform\Клиенты")
+                print(f"[!] Папка не найдена: {target_open}")
 
         elif act == '7':
             switch_tenant_crm(tenant_record)

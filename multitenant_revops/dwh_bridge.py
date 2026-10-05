@@ -16,10 +16,24 @@ if sys.stdout.encoding != 'utf-8':
     except:
         pass
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-SERVICE_ACCOUNT_FILE = os.path.join(BASE_DIR, '..', '..', 'service_account.json')
-if not os.path.exists(SERVICE_ACCOUNT_FILE):
-    SERVICE_ACCOUNT_FILE = os.path.join(r'C:\Users\strel\.gemini\antigravity\scratch', 'service_account.json')
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent
+
+def find_service_account():
+    candidates = [
+        os.getenv("REVOPS_SA_FILE"),
+        BASE_DIR / 'service_account.json',
+        BASE_DIR.parent / 'service_account.json',
+        BASE_DIR.parent.parent / 'service_account.json',
+        Path.home() / '.gemini' / 'antigravity' / 'scratch' / 'service_account.json'
+    ]
+    for c in candidates:
+        if c and os.path.exists(c):
+            return str(c)
+    return str(BASE_DIR / 'service_account.json')
+
+SERVICE_ACCOUNT_FILE = find_service_account()
 
 ARCHIVE_DIR = os.path.join(BASE_DIR, 'archive_cold_storage')
 os.makedirs(ARCHIVE_DIR, exist_ok=True)

@@ -25,12 +25,25 @@ if sys.stdin.encoding != 'utf-8':
     except:
         pass
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-SERVICE_ACCOUNT_FILE = os.path.join(BASE_DIR, '..', '..', 'service_account.json')
-if not os.path.exists(SERVICE_ACCOUNT_FILE):
-    SERVICE_ACCOUNT_FILE = os.path.join(r'C:\Users\strel\.gemini\antigravity\scratch', 'service_account.json')
+from pathlib import Path
 
-REGISTRY_FILE = os.path.join(BASE_DIR, 'tenants_registry.json')
+BASE_DIR = Path(__file__).resolve().parent
+
+def find_service_account():
+    candidates = [
+        os.getenv("REVOPS_SA_FILE"),
+        BASE_DIR / 'service_account.json',
+        BASE_DIR.parent / 'service_account.json',
+        BASE_DIR.parent.parent / 'service_account.json',
+        Path.home() / '.gemini' / 'antigravity' / 'scratch' / 'service_account.json'
+    ]
+    for c in candidates:
+        if c and os.path.exists(c):
+            return str(c)
+    return str(BASE_DIR / 'service_account.json')
+
+SERVICE_ACCOUNT_FILE = find_service_account()
+REGISTRY_FILE = str(BASE_DIR / 'tenants_registry.json')
 SHOWCASE_MASTER_ID = '1QnjrrbpqhYssofchee7G06szWrFvBCcOqGIVokjqdVc'
 CLEAN_TEMPLATE_ID = '1jBBotOfFh-XEJGScJyQi10jiFrna66OpJ91yPDrXy2A'
 
@@ -40,14 +53,14 @@ GOLDEN_MASTER_URL = f'https://docs.google.com/spreadsheets/d/{GOLDEN_MASTER_ID}/
 
 def get_base_url():
     try:
-        scratch_dir = r"C:\Users\strel\.gemini\antigravity\scratch"
+        scratch_dir = str(Path(os.getenv("REVOPS_SCRATCH", Path.home() / ".gemini" / "antigravity" / "scratch")))
         if scratch_dir not in sys.path:
             sys.path.append(scratch_dir)
         from tunnel_manager import get_active_tunnel_url
         url = get_active_tunnel_url()
         if url and url.startswith("http"):
             return url.rstrip('/')
-    except:
+    except Exception:
         pass
     return 'http://localhost:5678'
 
@@ -209,10 +222,10 @@ def ensure_passport_sheet(sh, tenant_record):
 
 
 def create_client_passport(tenant_record):
-    desktop_dir = os.path.join(os.environ.get('USERPROFILE', r'C:\Users\strel'), 'Desktop')
-    clients_base_dir = os.path.join(desktop_dir, 'RevOps Platform', 'Клиенты')
+    desktop_dir = Path(os.getenv("REVOPS_DESKTOP", Path.home() / 'Desktop'))
+    clients_base_dir = desktop_dir / 'RevOps Platform' / 'Клиенты'
     clean_name = re.sub(r'[\/:*?"<>|]', '_', tenant_record['tenant_name'])
-    client_folder = os.path.join(clients_base_dir, clean_name)
+    client_folder = clients_base_dir / clean_name
     os.makedirs(client_folder, exist_ok=True)
 
     filename_txt = f"Паспорт_клиента_{tenant_record['tenant_id']}_{clean_name}.txt"
@@ -557,7 +570,7 @@ def provision_tenant(company_name, client_email=None, sheet_id=None, folder_id=N
     print(f"🏢 Компания:    {company_name}")
     print(f"🔑 Tenant ID:   {tenant_id}")
     print(f"📊 Дашборд:     {new_sh.url}")
-    print(f"📁 Папка на ПК: C:\\Users\\strel\\Desktop\\RevOps Platform\\Клиенты\\{clean_name}\\")
+    print(f"📁 Папка на ПК: {client_folder}")
     print(f"🔌 CRM режим:   {crm_type.upper()}")
     print("─"*70)
     if crm_type in ['hybrid', 'both']:
