@@ -245,6 +245,9 @@ def create_client_passport(tenant_record):
 
 🏢 Компания:         {tenant_record['tenant_name']}
 🔑 Идентификатор:    {tenant_record['tenant_id']}
+🎯 Ниша бизнеса:     {tenant_record.get('niche_name', 'Универсальный B2B')}
+💰 Средний чек:      {tenant_record.get('avg_deal_check', 150000):,} ₽
+📌 Целевой Next Step:{tenant_record.get('target_next_step', 'Фиксация следующего контакта с датой и временем')}
 📅 Дата активации:   {tenant_record['created_at'][:19].replace('T', ' ')}
 🛡️ Статус защиты:    RBAC Hardware Lock (Активен)
 📊 Таблица отчётов:  {tenant_record['spreadsheet_url']}
@@ -340,18 +343,21 @@ Gemini 3.8 Flash, результат публикуется комментари
         rs.font.size = Pt(11)
         rs.font.color.rgb = RGBColor(100, 116, 139)
 
-        tbl = doc.add_table(rows=7, cols=2)
-        tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
-        tbl.style = 'Table Grid'
         t_data = [
             ("Компания:", tenant_record['tenant_name']),
             ("Идентификатор (Tenant ID):", tenant_record['tenant_id']),
+            ("Ниша бизнеса:", tenant_record.get('niche_name', 'Универсальный B2B')),
+            ("Средний чек сделки:", f"{tenant_record.get('avg_deal_check', 150000):,} ₽".replace(",", " ")),
+            ("Целевой Next Step:", tenant_record.get('target_next_step', 'Фиксация следующего контакта с датой и временем')),
             ("Дата активации:", tenant_record['created_at'][:19].replace('T', ' ')),
             ("Статус защиты ядра:", "🛡️ RBAC Hardware Lock (Активен)"),
             ("Email доступа:", tenant_record.get('client_email', 'Не указан')),
             ("CRM Режим:", crm_label),
             ("Google Таблица клиента:", tenant_record.get('spreadsheet_url', ''))
         ]
+        tbl = doc.add_table(rows=len(t_data), cols=2)
+        tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
+        tbl.style = 'Table Grid'
         for idx, (k, v) in enumerate(t_data):
             c1, c2 = tbl.cell(idx, 0), tbl.cell(idx, 1)
             c1.width = Inches(2.2)
@@ -405,7 +411,8 @@ Gemini 3.8 Flash, результат публикуется комментари
     return (filepath_txt, filepath_docx)
 
 
-def provision_tenant(company_name, client_email=None, sheet_id=None, folder_id=None, crm_type="amocrm", crm_webhook=None, amo_domain=None):
+def provision_tenant(company_name, client_email=None, sheet_id=None, folder_id=None, crm_type="amocrm", crm_webhook=None, amo_domain=None,
+                     niche_id="general_b2b", niche_name="Универсальный B2B", avg_deal_check=150000, target_next_step=None, main_objection=None, max_audit_calls=200):
     creds = get_credentials()
     gc = gspread.authorize(creds)
     with open(SERVICE_ACCOUNT_FILE, 'r', encoding='utf-8') as f:
@@ -476,6 +483,12 @@ def provision_tenant(company_name, client_email=None, sheet_id=None, folder_id=N
     tenant_record = {
         "tenant_id": tenant_id,
         "tenant_name": company_name,
+        "niche_id": niche_id,
+        "niche_name": niche_name or "Универсальный B2B",
+        "avg_deal_check": int(avg_deal_check) if avg_deal_check else 150000,
+        "target_next_step": target_next_step or "Фиксация следующего контакта с датой и временем",
+        "main_objection": main_objection or "Дорого / скиньте на почту",
+        "max_audit_calls": int(max_audit_calls) if max_audit_calls else 200,
         "client_email": ", ".join(valid_emails) if valid_emails else (client_email or ""),
         "client_emails": valid_emails,
         "crm_type": crm_type,

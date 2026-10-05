@@ -38,6 +38,7 @@ from tenant_provisioner import (
     SHOWCASE_MASTER_ID,
     GOLDEN_MASTER_ID
 )
+from niche_engine import NICHE_CATALOG, list_niches
 
 SERVICE_ACCOUNT_EMAIL = "n8n-bot@n8n-sheets-508111.iam.gserviceaccount.com"
 TEMPLATE_COPY_URL = f"https://docs.google.com/spreadsheets/d/{CLEAN_TEMPLATE_ID}/copy"
@@ -75,15 +76,71 @@ def run_wizard():
     print("─" * 74)
 
     # 1. Название компании
-    print("\n[ШАГ 1/4] НАЗВАНИЕ ОРГАНИЗАЦИИ КЛИЕНТА")
+    print("\n[ШАГ 1/5] НАЗВАНИЕ ОРГАНИЗАЦИИ КЛИЕНТА")
     while True:
         company_name = input("👉 Введите название компании (напр. ООО «ТехноТрейд»): ").strip()
         if company_name:
             break
         print("    [!] Название компании не может быть пустым.")
 
-    # 2. Email директора / РОПа / сотрудников
-    print("\n[ШАГ 2/4] ДОСТУП К АНАЛИТИКЕ REVOPS")
+    # 2. ПРОФИЛИРОВАНИЕ НИШИ И СПЕЦИФИКИ ПРОДАЖ
+    print("\n[ШАГ 2/5] 🎯 ПРОФИЛИРОВАНИЕ НИШИ И СПЕЦИФИКИ ПРОДУКТА")
+    print("💡 ИИ RevOps калибрует 13 критериев под термины и сценарии вашей сферы бизнеса.")
+    print("   (Продажа автозапчастей отличается от курсов психологии или промышленного оборудования)\n")
+    print("  Выберите сферу деятельности вашей компании:")
+    print("  [1] 🚗 Автозапчасти, сервис и автотовары (подбор по VIN, дубликаты, резерв склада)")
+    print("  [2] 🧠 Курсы психологии, EdTech и инфобизнес (точка А->Б, выгорание, рассрочка, бронь)")
+    print("  [3] 🏭 B2B производство, оборудование и сырье (ТЗ, ЛПР, окупаемость, Zoom)")
+    print("  [4] 🏢 Недвижимость, строительство и девелопмент (ипотека, закрытие на показ)")
+    print("  [5] 🩺 Медицина, здоровье, косметология и клиники (забота, 3D снимок, запись к врачу)")
+    print("  [6] 💼 Универсальный B2B (услуги, дистрибуция, опт)")
+    print("  [7] ✏️ Другая ниша (ввести свою нишу вручную)")
+
+    niche_choice = input("\n👉 Ваш выбор ниши [1-7, по умолчанию 1]: ").strip()
+    niche_keys = {
+        '1': 'auto_parts',
+        '2': 'edtech_psychology',
+        '3': 'b2b_equipment',
+        '4': 'real_estate',
+        '5': 'medical_services',
+        '6': 'general_b2b'
+    }
+    if niche_choice in niche_keys:
+        chosen_niche = NICHE_CATALOG[niche_keys[niche_choice]]
+        niche_id = chosen_niche['niche_id']
+        niche_name = chosen_niche['niche_name']
+        def_check = chosen_niche['default_avg_check']
+        def_ns = chosen_niche['target_next_step']
+        def_obj = chosen_niche['main_objection']
+    elif niche_choice == '7':
+        niche_id = 'custom'
+        custom_name = input("  👉 Введите название вашей ниши: ").strip() or "Пользовательская ниша"
+        niche_name = custom_name
+        def_check = 100000
+        def_ns = "Фиксация следующего контакта с датой и временем"
+        def_obj = "Дорого / скиньте на почту"
+    else:
+        chosen_niche = NICHE_CATALOG['auto_parts']
+        niche_id = 'auto_parts'
+        niche_name = chosen_niche['niche_name']
+        def_check = chosen_niche['default_avg_check']
+        def_ns = chosen_niche['target_next_step']
+        def_obj = chosen_niche['main_objection']
+
+    print(f"\n  ⚙️ Калибровка скрипта под нишу: {niche_name}")
+    check_in = input(f"  👉 Средний чек сделки, руб [по умолчанию {def_check:,} ₽]: ".replace(",", " ")).strip()
+    avg_deal_check = int(check_in) if check_in.isdigit() else def_check
+
+    ns_in = input(f"  👉 Целевой результат звонка [Enter: «{def_ns}»]: ").strip()
+    target_next_step = ns_in if ns_in else def_ns
+
+    obj_in = input(f"  👉 Главное возражение клиентов [Enter: «{def_obj}»]: ").strip()
+    main_objection = obj_in if obj_in else def_obj
+
+    print(f"    [✓] Отраслевой профиль зафиксирован: {niche_name} (Чек: {avg_deal_check:,} ₽)".replace(",", " "))
+
+    # 3. Email директора / РОПа / сотрудников
+    print("\n[ШАГ 3/5] ДОСТУП К АНАЛИТИКЕ REVOPS")
     print("💡 На указанные Email будут автоматически выданы права Редактора на персональный дашборд.")
     print("💡 Можно указать 1 или несколько адресов через запятую (директор, РОП, аналитик):")
     client_email = input("👉 Email сотрудников (напр. ceo@company.ru, rop@company.ru): ").strip()
@@ -93,8 +150,8 @@ def run_wizard():
     else:
         print("    [!] Адреса не указаны, доступ можно будет выдать позже.")
 
-    # 3. CRM система
-    print("\n[ШАГ 3/4] ВЫБОР CRM СИСТЕМЫ КЛИЕНТА")
+    # 4. CRM система
+    print("\n[ШАГ 4/5] ВЫБОР CRM СИСТЕМЫ КЛИЕНТА")
     print("  [1] amoCRM (АмоСРМ) — Интеграция телефонии / Webhook / API Токен")
     print("  [2] Битрикс24 (Bitrix24) — Входящий REST вебхук звонков")
     print("  [3] 🔥 ОБЕ СИСТЕМЫ ОДНОВРЕМЕННО (Гибридный режим amoCRM + Битрикс24)")
@@ -118,8 +175,8 @@ def run_wizard():
         amo_domain = input("  👉 Домен или поддомен amoCRM (напр. client.amocrm.ru): ").strip()
         crm_webhook = ""
 
-    # 4. Google Таблица (Изолированный дашборд)
-    print("\n[ШАГ 4/4] СОЗДАНИЕ ПЕРСОНАЛЬНОЙ GOOGLE ТАБЛИЦЫ")
+    # 5. Google Таблица (Изолированный дашборд)
+    print("\n[ШАГ 5/5] СОЗДАНИЕ ПЕРСОНАЛЬНОЙ GOOGLE ТАБЛИЦЫ")
     print("💡 Для клиента создаётся персональная ЧИСТАЯ копия дашборда RevOps V18.0 (Client Starter).")
     print(f"👉 Ссылка для создания чистой копии в 1 клик:")
     print(f"   {TEMPLATE_COPY_URL}\n")
@@ -151,7 +208,12 @@ def run_wizard():
         sheet_id=sheet_id,
         crm_type=crm_type,
         crm_webhook=crm_webhook,
-        amo_domain=amo_domain
+        amo_domain=amo_domain,
+        niche_id=niche_id,
+        niche_name=niche_name,
+        avg_deal_check=avg_deal_check,
+        target_next_step=target_next_step,
+        main_objection=main_objection
     )
 
     if not record:
