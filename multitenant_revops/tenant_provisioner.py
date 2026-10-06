@@ -529,10 +529,12 @@ def provision_tenant(
         except Exception as e:
             print(f"    [-] Автокопирование через Google Drive API не удалось: {e}")
             print("    [!] ВНИМАНИЕ: Во избежание порчи мастер-шаблона авто-провижининг остановлен.")
-            print(f"    [i] 1. Откройте ссылку шаблона: https://docs.google.com/spreadsheets/d/{CLEAN_TEMPLATE_ID}/copy")
+            print(
+                f"    [i] 1. Откройте ссылку шаблона: https://docs.google.com/spreadsheets/d/{CLEAN_TEMPLATE_ID}/copy"
+            )
             print("    [i] 2. Создайте персональную копию для клиента")
             print(f"    [i] 3. Выдайте сервисному аккаунту ({sa_email}) права 'Редактор'")
-            print(f"    [i] 4. Запустите: python tenant_provisioner.py --name \"{company_name}\" --sheet-id <ID_КОПИИ>")
+            print(f'    [i] 4. Запустите: python tenant_provisioner.py --name "{company_name}" --sheet-id <ID_КОПИИ>')
             return None
 
     # 2. Инициализация параметров тенанта

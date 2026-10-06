@@ -615,25 +615,52 @@ def sync_executive_dashboards(sh):
         ws_exec = sh.worksheet("📄 Executive_OnePager")
         kpi_f5_g5 = [
             [
-                '=IFERROR(COUNTIF(\'🎯 Воронка_и_SLA\'!$F$4:$F$8, "⚠️ ПРОСРОЧЕН"), 0)',
+                "=IFERROR(COUNTIF('🎯 Воронка_и_SLA'!$F$4:$F$8, \"⚠️ ПРОСРОЧЕН\"), 0)",
                 '=IFERROR(ROUND(AVERAGEIF(raw_calls!$T$2:$T1000, ">0"), 1), 0)',
             ]
         ]
         ws_exec.update(range_name="F5:G5", values=kpi_f5_g5, value_input_option="USER_ENTERED")
 
         funnel_exec_rows = [
-            ["='⚙️ Настройки'!$B$12", "='⚡ Пульс_Компании'!B10", "='⚡ Пульс_Компании'!C10", "='⚙️ Настройки'!$C$12 & \" ч\""],
-            ["='⚙️ Настройки'!$B$13", "='⚡ Пульс_Компании'!B11", "='⚡ Пульс_Компании'!C11", "='⚙️ Настройки'!$C$13 & \" ч\""],
-            ["='⚙️ Настройки'!$B$14", "='⚡ Пульс_Компании'!B12", "='⚡ Пульс_Компании'!C12", "='⚙️ Настройки'!$C$14 & \" ч\""],
-            ["='⚙️ Настройки'!$B$15", "='⚡ Пульс_Компании'!B13", "='⚡ Пульс_Компании'!C13", "='⚙️ Настройки'!$C$15 & \" ч\""],
-            ["='⚙️ Настройки'!$B$16", "='⚡ Пульс_Компании'!B14", "='⚡ Пульс_Компании'!C14", "='⚙️ Настройки'!$C$16 & \" ч\""],
+            [
+                "='⚙️ Настройки'!$B$12",
+                "='⚡ Пульс_Компании'!B10",
+                "='⚡ Пульс_Компании'!C10",
+                "='⚙️ Настройки'!$C$12 & \" ч\"",
+            ],
+            [
+                "='⚙️ Настройки'!$B$13",
+                "='⚡ Пульс_Компании'!B11",
+                "='⚡ Пульс_Компании'!C11",
+                "='⚙️ Настройки'!$C$13 & \" ч\"",
+            ],
+            [
+                "='⚙️ Настройки'!$B$14",
+                "='⚡ Пульс_Компании'!B12",
+                "='⚡ Пульс_Компании'!C12",
+                "='⚙️ Настройки'!$C$14 & \" ч\"",
+            ],
+            [
+                "='⚙️ Настройки'!$B$15",
+                "='⚡ Пульс_Компании'!B13",
+                "='⚡ Пульс_Компании'!C13",
+                "='⚙️ Настройки'!$C$15 & \" ч\"",
+            ],
+            [
+                "='⚙️ Настройки'!$B$16",
+                "='⚡ Пульс_Компании'!B14",
+                "='⚡ Пульс_Компании'!C14",
+                "='⚙️ Настройки'!$C$16 & \" ч\"",
+            ],
             ["='⚙️ Настройки'!$B$17", "='⚡ Пульс_Компании'!B15", "='⚡ Пульс_Компании'!C15", "0 ч"],
             ["='⚙️ Настройки'!$B$18", "='⚡ Пульс_Компании'!B16", "='⚡ Пульс_Компании'!C16", "0 ч"],
         ]
         ws_exec.update(range_name="A9:D15", values=funnel_exec_rows, value_input_option="USER_ENTERED")
         try:
             ws_exec.format("B9:B15", {"horizontalAlignment": "CENTER"})
-            ws_exec.format("C9:C15", {"numberFormat": {"type": "CURRENCY", "pattern": "#,##0 ₽"}, "horizontalAlignment": "RIGHT"})
+            ws_exec.format(
+                "C9:C15", {"numberFormat": {"type": "CURRENCY", "pattern": "#,##0 ₽"}, "horizontalAlignment": "RIGHT"}
+            )
             ws_exec.format("D9:D15", {"horizontalAlignment": "CENTER"})
         except Exception:
             pass
@@ -657,7 +684,9 @@ def sync_executive_dashboards(sh):
         ]
         ws_exec.update(range_name="F9:I13", values=action_rows, value_input_option="USER_ENTERED")
         try:
-            ws_exec.format("H9:H13", {"numberFormat": {"type": "CURRENCY", "pattern": "#,##0 ₽"}, "horizontalAlignment": "RIGHT"})
+            ws_exec.format(
+                "H9:H13", {"numberFormat": {"type": "CURRENCY", "pattern": "#,##0 ₽"}, "horizontalAlignment": "RIGHT"}
+            )
         except Exception:
             pass
     except Exception as e:
@@ -689,7 +718,9 @@ def sync_executive_dashboards(sh):
         ]
         ws_rop.update(range_name="A9:F13", values=rop_rows, value_input_option="USER_ENTERED")
         try:
-            ws_rop.format("D9:D13", {"numberFormat": {"type": "CURRENCY", "pattern": "#,##0 ₽"}, "horizontalAlignment": "RIGHT"})
+            ws_rop.format(
+                "D9:D13", {"numberFormat": {"type": "CURRENCY", "pattern": "#,##0 ₽"}, "horizontalAlignment": "RIGHT"}
+            )
         except Exception:
             pass
     except Exception as e:
@@ -700,7 +731,11 @@ def sync_executive_dashboards(sh):
         ws_leak = sh.worksheet("💸 Диагностика_Утечек_ОП")
         ws_leak.update(
             range_name="D11",
-            values=[["=IFERROR(SUMIFS(raw_deals!$C$2:$C1000, raw_deals!$H$2:$H1000, '⚙️ Настройки'!$A$21, raw_deals!$D$2:$D1000, \"<=5\"), 0)"]],
+            values=[
+                [
+                    "=IFERROR(SUMIFS(raw_deals!$C$2:$C1000, raw_deals!$H$2:$H1000, '⚙️ Настройки'!$A$21, raw_deals!$D$2:$D1000, \"<=5\"), 0)"
+                ]
+            ],
             value_input_option="USER_ENTERED",
         )
     except Exception as e:
@@ -1220,7 +1255,9 @@ def auto_discover_and_sync_all(tenant_record):
         # 6. Синхронизация управленческих дашбордов и бесшовной навигации
         sync_executive_dashboards(sh)
         sync_internal_navigation_bars(sh)
-        print("      [✓] Дашборды '📄 Executive_OnePager', '📋 Пульт_РОПа_15_Минут' и локальная навигация синхронизированы!")
+        print(
+            "      [✓] Дашборды '📄 Executive_OnePager', '📋 Пульт_РОПа_15_Минут' и локальная навигация синхронизированы!"
+        )
 
         # 7. n8n синхронизация
         print("[7/7] 🔄 Синхронизация с n8n воркфлоу...")
@@ -1408,7 +1445,10 @@ def sync_token_to_n8n_workflow(domain, token, sheet_id=None):
                                 trusted[tid] = {
                                     "spreadsheet_id": t.get("spreadsheet_id", ""),
                                     "b24_webhook_url": t.get("b24_webhook_url") or t.get("crm_webhook_url", ""),
-                                    "amo_domain": (t.get("amo_domain") or clean_domain).replace("https://", "").replace("http://", "").strip("/"),
+                                    "amo_domain": (t.get("amo_domain") or clean_domain)
+                                    .replace("https://", "")
+                                    .replace("http://", "")
+                                    .strip("/"),
                                     "secret": t.get("secret", f"revops_sec_{tid.lower().replace('-', '')}"),
                                 }
                         js_code = params.get("jsCode", "")
