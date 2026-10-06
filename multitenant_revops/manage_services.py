@@ -88,7 +88,18 @@ def start_services():
         print(f"  [✓] n8n Orchestrator уже работает на порту {N8N_PORT}")
     else:
         print(f"  [+] Запуск n8n Orchestrator (порт {N8N_PORT})...")
-        if os.path.exists(N8N_HEADLESS):
+        n8n_silent_py = os.path.join(os.path.dirname(__file__), "run_n8n_silent.py")
+        if os.path.exists(n8n_silent_py):
+            subprocess.run([sys.executable, n8n_silent_py], capture_output=True)
+            for _ in range(25):
+                time.sleep(1)
+                if check_n8n_health():
+                    break
+            if check_n8n_health():
+                print(f"  [✓] n8n Orchestrator успешно запущен!")
+            else:
+                print(f"  [!] n8n инициализируется в фоне...")
+        elif os.path.exists(N8N_HEADLESS):
             subprocess.run(["powershell", "-ExecutionPolicy", "Bypass", "-File", N8N_HEADLESS], capture_output=True)
             for _ in range(20):
                 time.sleep(1)
@@ -155,7 +166,7 @@ def start_services():
     print(f"  • n8n Orchestrator (Вебхуки):    {n_ok} (http://127.0.0.1:{N8N_PORT})")
     print(f"  • Авто-синхронизация сделок:     🟢 24/7 (каждые 3 мин в raw_deals)")
     print(f"  • Защищённый Webhook URL:        🌐 {cf_url}")
-    print(f"  • Gemini 3.8 Flash AI Аудит:     🟢 ПОДКЛЮЧЕН")
+    print(f"  • Gemini 3.5 Flash AI Аудит:     🟢 ПОДКЛЮЧЕН")
     print("═"*60 + "\n")
 
 def stop_services():
@@ -163,20 +174,10 @@ def stop_services():
     print("🛑 REVOPS ENTERPRISE OS — ОСТАНОВКА СЛУЖБ")
     print("═"*60 + "\n")
 
-    # Stop n8n (only the PID listening on port 5678)
+    # Stop node (n8n)
     try:
-        netstat = subprocess.run(["netstat", "-ano"], capture_output=True, text=True).stdout
-        pids = set()
-        for line in netstat.splitlines():
-            if f":{N8N_PORT} " in line and "LISTENING" in line:
-                parts = line.strip().split()
-                if parts:
-                    pids.add(parts[-1])
-        for pid in pids:
-            subprocess.run(["taskkill", "/F", "/PID", pid], capture_output=True)
-            print(f"  [✓] Служба n8n Orchestrator (PID {pid}) остановлена")
-        if not pids:
-            print("  [i] n8n Orchestrator не был запущен")
+        subprocess.run(["taskkill", "/F", "/IM", "node.exe"], capture_output=True, text=True)
+        print("  [✓] Служба n8n (node.exe) остановлена")
     except Exception as e:
         print(f"  [!] Ошибка остановки n8n: {e}")
 
