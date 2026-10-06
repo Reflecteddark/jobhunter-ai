@@ -884,6 +884,33 @@ def sync_amocrm_deals_to_sheet(sheet_id, domain, token):
     ok, count, msg = auto_discover_and_sync_all(temp_record)
     return ok, count, msg
 
+
+def verify_amocrm_token(domain: str, token: str):
+    """Проверяет валидность долгосрочного токена amoCRM через GET /api/v4/account"""
+    clean_domain = domain.replace("https://", "").replace("http://", "").strip("/")
+    if not clean_domain.endswith(".amocrm.ru"):
+        clean_domain = f"{clean_domain}.amocrm.ru"
+    url = f"https://{clean_domain}/api/v4/account"
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    req = urllib.request.Request(
+        url,
+        headers={
+            "Authorization": f"Bearer {token.strip()}",
+            "User-Agent": "RevOps-Enterprise-OS/18.0",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10, context=ctx) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            return True, data
+    except urllib.error.HTTPError as he:
+        return False, {"error": f"HTTP {he.code}: {he.reason}"}
+    except Exception as e:
+        return False, {"error": str(e)}
+
+
 def test_amocrm_task_creation(domain, token):
     """Тестирует создание задачи в amoCRM (Модуль 3: Ликвидатор сливов Next Step)"""
     clean_domain = domain.replace('https://', '').replace('http://', '').strip('/')

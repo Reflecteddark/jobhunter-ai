@@ -541,6 +541,8 @@ def provision_tenant(company_name, client_email=None, sheet_id=None, folder_id=N
 
     # 7. Паспорт клиента в персональную папку клиента
     clean_name = re.sub(r'[\/:*?"<>|]', '_', tenant_record['tenant_name'])
+    desktop_dir = Path(os.getenv("REVOPS_DESKTOP", Path.home() / "Desktop"))
+    client_folder = desktop_dir / "RevOps Platform" / "Клиенты" / clean_name
     passport_paths = create_client_passport(tenant_record)
     if passport_paths:
         print(f"    [✓] Паспорт сохранён в папку клиента: 'RevOps Platform\\Клиенты\\{clean_name}\\'")
