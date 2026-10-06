@@ -1394,6 +1394,30 @@ def sync_token_to_n8n_workflow(domain, token, sheet_id=None):
                             if p.get("name") == "Authorization":
                                 p["value"] = f"Bearer {token}"
 
+                if "gemini" in n.get("name", "").lower():
+                    if "url" in params and "gemini-3.8-flash" in params["url"]:
+                        params["url"] = params["url"].replace("gemini-3.8-flash", "gemini-3.5-flash")
+
+                if n.get("name") in ["Parse amoCRM Call", "Parse Bitrix24 Call"]:
+                    try:
+                        reg = load_registry()
+                        trusted = {}
+                        for t in reg.get("tenants", []):
+                            tid = t.get("tenant_id")
+                            if tid:
+                                trusted[tid] = {
+                                    "spreadsheet_id": t.get("spreadsheet_id", ""),
+                                    "b24_webhook_url": t.get("b24_webhook_url") or t.get("crm_webhook_url", ""),
+                                    "amo_domain": (t.get("amo_domain") or clean_domain).replace("https://", "").replace("http://", "").strip("/"),
+                                    "secret": t.get("secret", f"revops_sec_{tid.lower().replace('-', '')}"),
+                                }
+                        js_code = params.get("jsCode", "")
+                        if "const TRUSTED_TENANTS =" in js_code:
+                            rep = f"const TRUSTED_TENANTS = {json.dumps(trusted, indent=2)};"
+                            params["jsCode"] = re.sub(r"const TRUSTED_TENANTS\s*=\s*\{[\s\S]*?\};", rep, js_code)
+                    except Exception:
+                        pass
+
                 if sheet_id and ("sheet" in n.get("type", "").lower() or "google" in n.get("type", "").lower()):
                     doc = params.get("documentId")
                     val_expr = f"={{{{ $json.spreadsheet_id || '{sheet_id}' }}}}"
