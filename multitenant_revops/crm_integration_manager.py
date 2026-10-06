@@ -892,12 +892,11 @@ def verify_amocrm_token(domain: str, token: str):
         clean_domain = f"{clean_domain}.amocrm.ru"
     url = f"https://{clean_domain}/api/v4/account"
     ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
     req = urllib.request.Request(
         url,
         headers={
             "Authorization": f"Bearer {token.strip()}",
+            "Content-Type": "application/json",
             "User-Agent": "RevOps-Enterprise-OS/18.0",
         },
     )
@@ -906,9 +905,9 @@ def verify_amocrm_token(domain: str, token: str):
             data = json.loads(resp.read().decode("utf-8"))
             return True, data
     except urllib.error.HTTPError as he:
-        return False, {"error": f"HTTP {he.code}: {he.reason}"}
+        return False, f"HTTP Error {he.code}: {he.reason}"
     except Exception as e:
-        return False, {"error": str(e)}
+        return False, str(e)
 
 
 def test_amocrm_task_creation(domain, token):

@@ -221,12 +221,18 @@ def ensure_passport_sheet(sh, tenant_record):
         pass
 
 
+def get_client_folder(tenant_name: str) -> Path:
+    """Возвращает кроссплатформенный путь к локальной папке клиента и гарантирует её создание."""
+    clean = re.sub(r'[\/:*?"<>|]', "_", tenant_name)
+    base = Path(os.getenv("REVOPS_DESKTOP", Path.home() / "Desktop"))
+    folder = base / "RevOps Platform" / "Клиенты" / clean
+    folder.mkdir(parents=True, exist_ok=True)
+    return folder
+
+
 def create_client_passport(tenant_record):
-    desktop_dir = Path(os.getenv("REVOPS_DESKTOP", Path.home() / 'Desktop'))
-    clients_base_dir = desktop_dir / 'RevOps Platform' / 'Клиенты'
-    clean_name = re.sub(r'[\/:*?"<>|]', '_', tenant_record['tenant_name'])
-    client_folder = clients_base_dir / clean_name
-    os.makedirs(client_folder, exist_ok=True)
+    client_folder = get_client_folder(tenant_record["tenant_name"])
+    clean_name = client_folder.name
 
     filename_txt = f"Паспорт_клиента_{tenant_record['tenant_id']}_{clean_name}.txt"
     filepath_txt = os.path.join(client_folder, filename_txt)
@@ -540,9 +546,8 @@ def provision_tenant(company_name, client_email=None, sheet_id=None, folder_id=N
     ensure_passport_sheet(new_sh, tenant_record)
 
     # 7. Паспорт клиента в персональную папку клиента
-    clean_name = re.sub(r'[\/:*?"<>|]', '_', tenant_record['tenant_name'])
-    desktop_dir = Path(os.getenv("REVOPS_DESKTOP", Path.home() / "Desktop"))
-    client_folder = desktop_dir / "RevOps Platform" / "Клиенты" / clean_name
+    client_folder = get_client_folder(tenant_record["tenant_name"])
+    clean_name = client_folder.name
     passport_paths = create_client_passport(tenant_record)
     if passport_paths:
         print(f"    [✓] Паспорт сохранён в папку клиента: 'RevOps Platform\\Клиенты\\{clean_name}\\'")
