@@ -141,16 +141,31 @@ def sync_all():
     print(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting full email movement sync...")
     
     # 1. Connect to Google Sheets
-    sa_path = os.path.join(os.path.dirname(__file__), "service_account.json")
+    candidate_paths = [
+        os.path.join(os.path.dirname(__file__), "service_account.json"),
+        os.path.join(os.path.dirname(__file__), "revops-enterprise-os", "service_account.json"),
+        os.path.join(os.path.dirname(os.path.dirname(__file__)), "revops-enterprise-os", "service_account.json"),
+        os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "revops-enterprise-os", "service_account.json"),
+        r"C:\Users\strel\.gemini\antigravity\scratch\revops-enterprise-os\service_account.json"
+    ]
+    sa_path = next((p for p in candidate_paths if os.path.exists(p)), None)
+    if not sa_path:
+        raise FileNotFoundError("service_account.json not found in any expected location")
+
     with open(sa_path, "r", encoding="utf-8") as f:
         sa = json.load(f)
 
-    creds = Credentials.from_service_account_info({
-        "type": "service_account",
-        "client_email": sa["email"],
-        "private_key": sa["privateKey"],
-        "token_uri": "https://oauth2.googleapis.com/token"
-    }, scopes=["https://www.googleapis.com/auth/spreadsheets"])
+    if "client_email" in sa and "private_key" in sa:
+        creds = Credentials.from_service_account_info(
+            sa, scopes=["https://www.googleapis.com/auth/spreadsheets"]
+        )
+    else:
+        creds = Credentials.from_service_account_info({
+            "type": "service_account",
+            "client_email": sa.get("email") or sa.get("client_email"),
+            "private_key": sa.get("privateKey") or sa.get("private_key"),
+            "token_uri": sa.get("token_uri", "https://oauth2.googleapis.com/token")
+        }, scopes=["https://www.googleapis.com/auth/spreadsheets"])
 
     gc = gspread.authorize(creds)
     sh = gc.open_by_key(SPREADSHEET_ID)
